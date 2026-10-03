@@ -137,22 +137,25 @@ bool lockForReq(CanCommand param) {
     if(!doc["type"] || strcmp("req", doc["type"]) != 0) {
         return false;
     }
-    if(!doc["field"] || strcmp(param.name, doc["field"]) != 0) {
+    if(!doc["field"] || strcmp(param.attr->name, doc["field"]) != 0) {
+        return false;
+    }
+    if(!doc["action"] || strcmp(param.action, doc["action"]) != 0) {
         return false;
     }
     canLock();
     return true;
 }
 
-bool canSendReq(CanCommand param) {
+bool canSendReq(CanCommand canCmd) {
     twai_message_t tx = {};
-    tx.identifier = param.id;
+    tx.identifier = canCmd.id;
     tx.extd = 1;
     tx.rtr = 0;
     tx.data_length_code = 0;
     esp_err_t res = twai_transmit(&tx, pdMS_TO_TICKS(1000));
     if (res != ESP_OK) {
-        errorUnlock("Failed sending CAN request for %s: %d", param.name, res);
+        errorUnlock("Failed sending CAN request for %s: %d", canCmd.attr->name, res);
         return false;
     }
     return true;
@@ -197,7 +200,10 @@ void decodeToBMessage(const twai_message_t &msg) {
 }
 
 boolean isCtrlerToBsst() {
-    return (bMessage.source == CAN_DRIVE_UNIT && bMessage.target == CAN_BESST);
+    return (
+        bMessage.source == CAN_DRIVE_UNIT &&
+        bMessage.target == CAN_BESST
+    );
 }
 
 bool decodeMfParam0() {
@@ -214,7 +220,11 @@ bool decodeMfStart(uint8_t expectedCmd, uint8_t expectedSubCmd) {
     if(!canLocked) {
         return false;
     }
-    if(bMessage.op != 0x04 || bMessage.cmd != expectedCmd || bMessage.subCmd != expectedSubCmd) {
+    if(
+        bMessage.op != CAN_MULTIFRAME_START || 
+        bMessage.cmd != expectedCmd || 
+        bMessage.subCmd != expectedSubCmd
+    ) {
       return false;
     }
     if(!sendAck()) {
@@ -231,7 +241,10 @@ bool decodeMfFrame() {
     if(!canLocked) {
         return false;
     }
-    if(bMessage.op != 0x05 && bMessage.op != 0x06) {
+    if(
+        bMessage.op != CAN_MULTIFRAME &&
+        bMessage.op != CAN_MULTIFRAME_END
+    ) {
       return false;
     }
     if(!sendAck()) {
