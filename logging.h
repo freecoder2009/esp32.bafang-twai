@@ -18,6 +18,7 @@ void log(const int level, const char* format, va_list va) {
     vsprintf(logBuff, format, va);
     logDoc.clear();
     logDoc["type"] = "log";
+    logDoc["time"] = millis();
     logDoc["level"] = level;
     logDoc["message"] = logBuff;
     serializeJson(logDoc, Serial);

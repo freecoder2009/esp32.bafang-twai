@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "driver/twai.h"
 #include <ArduinoJson.h>
+#include "constants.h"
 #include "logging.h"
 
 #define TX_PIN GPIO_NUM_5
@@ -27,7 +28,7 @@ struct BafangResult {
     uint8_t data[MAX_RESULT_BUFF_LEN];
 };
 
-char buff[MAX_BUFF_LEN];
+char serialBuff[MAX_BUFF_LEN];
 bool canLocked = false;
 unsigned long canLockedAt = 0;
 BafangMessage bMessage{};
@@ -56,17 +57,12 @@ void setup() {
 }
 
 void loop() {
-    if(readSerialLine()) {
-        if(canLocked) {
-            warn("Already locked, ignoring request.");
-        } else if(parseLine()) {
-            if(lockIfReqFor("param0") || lockIfReqFor("param1")) {
-                initBResult();
-            } else {
-                warn("Request or field not recognized: %s.", buff);
-                return;
-            }
-        };
+    if(readSerialLine()
+        && requireCanUnlocked()
+        && parseSerialLine()
+        && lockForSupportedCommand()
+    ) {
+        initBResult();
     }
     if(canReceiveMsg()) {
         if (decodeMfParam0() && mfComplete()) {
@@ -87,19 +83,27 @@ boolean readSerialLine() {
   while(Serial.available()) {
     c = Serial.read();
     if(c == '\r') {
-      buff[idx] = '\0';
+      serialBuff[idx] = '\0';
       idx = 0;
       return true;
     }
     if(idx < MAX_BUFF_LEN-1) {
-      buff[idx++] = c;
+      serialBuff[idx++] = c;
     }
   }
   return false;
 }
 
-bool parseLine() {
-    DeserializationError jsonParseError = deserializeJson(doc, buff);
+bool requireCanUnlocked() {
+    if(canLocked) {
+        warn("CAN is already locked.");
+        return false;
+    }
+    return true;
+}
+
+bool parseSerialLine() {
+    DeserializationError jsonParseError = deserializeJson(doc, serialBuff);
     if (jsonParseError) {
         errorUnlock("Error deserializing: %s", jsonParseError.c_str());
         return false;
@@ -107,34 +111,50 @@ bool parseLine() {
     return true;
 }
 
-bool lockIfReqFor(const char* param) {
-    if(!lockForReq(param)) {
-        return false;
+bool lockForSupportedCommand() {
+    int commandsCnt = sizeof(CAN_SUPPORTED_COMMANDS) / sizeof(CAN_SUPPORTED_COMMANDS[0]);
+    CanCommand request;
+    for(int i=0 ; i<commandsCnt ; i++) {
+        request = CAN_SUPPORTED_COMMANDS[i];
+        if(!lockForReq(request)) {
+            continue;
+        }
+        if(!canSendReq(request)) {
+            return false;
+        }
+        // takes 400ms for some reason
+        //debug("Locked for request: %s.", serialBuff);
+        return true;
     }
-    twai_message_t tx = {};
-    tx.identifier = 0x85116010;
-    tx.extd = 1;
-    tx.rtr = 0;
-    tx.data_length_code = 0;
-    esp_err_t res = twai_transmit(&tx, pdMS_TO_TICKS(1000));
-    if (res != ESP_OK) {
-        errorUnlock("Failed sending CAN request for %s: %d", param, res);
-        return false;
-    }
-    return true;
+    errorUnlock("Unrecognized request: %s.", serialBuff);
+    return false;
 }
 
-bool lockForReq(const char* param) {
+bool lockForReq(CanCommand param) {
     if(canLocked) {
         return false;
     }
     if(!doc["type"] || strcmp("req", doc["type"]) != 0) {
         return false;
     }
-    if(!doc["field"] || strcmp(param, doc["field"]) != 0) {
+    if(!doc["field"] || strcmp(param.name, doc["field"]) != 0) {
         return false;
     }
     canLock();
+    return true;
+}
+
+bool canSendReq(CanCommand param) {
+    twai_message_t tx = {};
+    tx.identifier = param.id;
+    tx.extd = 1;
+    tx.rtr = 0;
+    tx.data_length_code = 0;
+    esp_err_t res = twai_transmit(&tx, pdMS_TO_TICKS(1000));
+    if (res != ESP_OK) {
+        errorUnlock("Failed sending CAN request for %s: %d", param.name, res);
+        return false;
+    }
     return true;
 }
 
@@ -177,7 +197,7 @@ void decodeToBMessage(const twai_message_t &msg) {
 }
 
 boolean isCtrlerToBsst() {
-    return (bMessage.source == 0x02 && bMessage.target == 0x05);
+    return (bMessage.source == CAN_DRIVE_UNIT && bMessage.target == CAN_BESST);
 }
 
 bool decodeMfParam0() {
