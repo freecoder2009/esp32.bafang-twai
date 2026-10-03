@@ -23,6 +23,7 @@ struct BafangMessage {
 };
 
 struct BafangResult {
+    const CanAttr* attr;
     int totBytes;
     int rcvdBytes;
     uint8_t data[MAX_RESULT_BUFF_LEN];
@@ -64,13 +65,11 @@ void loop() {
     ) {
         initBResult();
     }
-    if(canReceiveMsg()) {
-        if (decodeMfParam0() && mfComplete()) {
-            returnParam0();
-        } else
-        if (decodeMfParam1() && mfComplete()) {
-            returnParam1();
-        }
+    if(canReceiveMsg()
+        && decodedMf()
+        && completedMf()
+    ) {
+        returnBResult();
     }
     if(canLockedForTooLong()) {
         errorUnlock("Timeout waiting multiframes.");
@@ -112,9 +111,8 @@ bool parseSerialLine() {
 }
 
 bool lockForSupportedCommand() {
-    int commandsCnt = sizeof(CAN_SUPPORTED_COMMANDS) / sizeof(CAN_SUPPORTED_COMMANDS[0]);
     CanCommand request;
-    for(int i=0 ; i<commandsCnt ; i++) {
+    for(int i=0 ; i<CAN_SUPPORTED_COMMANDS_COUNT ; i++) {
         request = CAN_SUPPORTED_COMMANDS[i];
         if(!lockForReq(request)) {
             continue;
@@ -162,6 +160,7 @@ bool canSendReq(CanCommand canCmd) {
 }
 
 void initBResult() {
+    bResult.attr = NULL;
     bResult.totBytes = -1;
     bResult.rcvdBytes = 0;
     for (int i=0 ; i<MAX_RESULT_BUFF_LEN ; i++) {
@@ -206,38 +205,48 @@ boolean isCtrlerToBsst() {
     );
 }
 
-bool decodeMfParam0() {
+bool decodedMf() {
     if(!canLocked) {
         return false;
     }
-    return (
-        decodeMfStart(0x60, 0x10) ||
-        decodeMfFrame()
-    );
+    if(decodedMfStart() || decodedMfFrame()) {
+        return true;
+    }
+    return false;
 }
 
-bool decodeMfStart(uint8_t expectedCmd, uint8_t expectedSubCmd) {
+bool decodedMfStart() {
     if(!canLocked) {
         return false;
     }
-    if(
-        bMessage.op != CAN_MULTIFRAME_START || 
-        bMessage.cmd != expectedCmd || 
-        bMessage.subCmd != expectedSubCmd
-    ) {
-      return false;
+    const CanAttr *attr;
+    bool found = false;
+    for(int i=0 ; i<CAN_SUPPORTED_COMMANDS_COUNT ; i++) {
+        attr = CAN_SUPPORTED_COMMANDS[i].attr;
+        if(
+            bMessage.op == CAN_MULTIFRAME_START &&
+            bMessage.cmd == attr->cmd &&
+            bMessage.subCmd == attr->subCmd
+        ) {
+            found = true;
+            break;
+        }
+    }
+    if(!found) {
+        return false;
     }
     if(!sendAck()) {
         return false;
     }
     int totBytesExpected = bMessage.data[0];
     bResult.totBytes = totBytesExpected;
+    bResult.attr = attr;
     debugBMessage("MultiFrameStart");
     debug("Total bytes expected = %d", totBytesExpected);
     return true;
 }
 
-bool decodeMfFrame() {
+bool decodedMfFrame() {
     if(!canLocked) {
         return false;
     }
@@ -278,18 +287,21 @@ void saveMfBytes() {
     for (int i=0 ; i<bMessage.dlc ; i++) {
         bResult.data[frmIdx*8 + i] = bMessage.data[i];
     }
+    // should not add if this frame was received before
+    // (may happen if controller retries send)
     bResult.rcvdBytes += bMessage.dlc;
 }
 
-bool mfComplete() {
+bool completedMf() {
     return (
+        bResult.attr != NULL &&
         bResult.totBytes > 0 &&
         bResult.rcvdBytes == bResult.totBytes
     );
 }
 
-void returnParam0() {
-    debug("Returning param0.");
+void returnBResult() {
+    debugBResult("Returning");
     canUnlock();
 }
 
@@ -325,13 +337,24 @@ void errorUnlock(const char* format, ...) {
 }
 
 void debugBMessage(char* text) {
-    char data[50];
-    for (int i = 0; i < bMessage.dlc; i++) {
+    char data[bMessage.dlc*3 + 10];
+    for (int i=0; i<bMessage.dlc; i++) {
         sprintf(data+3*i, "%02X ", bMessage.data[i]);
     }
     debug("%s: ID=%08lX SRC=%02X DST=%02X DLC=%d OP=%02X CMD=%02X SUB=%02X DATA=%s",
         text, bMessage.id, bMessage.source, bMessage.target, bMessage.dlc,
         bMessage.op, bMessage.cmd, bMessage.subCmd, data
+    );
+}
+
+void debugBResult(char* text) {
+    char data[bResult.totBytes*3 + 10];
+    for (int i=0; i<bResult.totBytes; i++) {
+        sprintf(data+3*i, "%02X ", bResult.data[i]);
+    }
+    debug("%s: FIELD=%s CMD=%02X SUB=%02X BYTES:%d DATA=%s",
+        text, bResult.attr->name, bResult.attr->cmd, 
+        bResult.attr->subCmd, bResult.totBytes, data
     );
 }
 

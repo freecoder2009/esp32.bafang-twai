@@ -40,6 +40,7 @@ const CanCommand CAN_PARAM1_READ { .attr=&CAN_PARAM1, .action="read", .id=bafang
 const CanCommand CAN_SUPPORTED_COMMANDS[] = {
     CAN_PARAM0_READ
 };
+const int CAN_SUPPORTED_COMMANDS_COUNT = sizeof(CAN_SUPPORTED_COMMANDS) / sizeof(CAN_SUPPORTED_COMMANDS[0]);
 
 // read id calculator
 uint32_t bafangCanReadId(const CanAttr &canAttr) {
