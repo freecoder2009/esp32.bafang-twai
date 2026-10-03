@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "driver/twai.h"
 #include <ArduinoJson.h>
+#include "logging.h"
 
 #define TX_PIN GPIO_NUM_5
 #define RX_PIN GPIO_NUM_4
@@ -27,7 +28,6 @@ struct BafangResult {
 };
 
 char buff[MAX_BUFF_LEN];
-char logBuff[MAX_BUFF_LEN];
 bool canLocked = false;
 unsigned long canLockedAt = 0;
 BafangMessage bMessage{};
@@ -286,7 +286,7 @@ void canUnlock() {
 void errorUnlock(const char* format, ...) {
     va_list args;
     va_start(args, format);
-    log("error", format, args);
+    log(LOG_ERROR, format, args);
     va_end(args);
     canUnlock();
 }
@@ -302,40 +302,3 @@ void debugBMessage(char* text) {
     );
 }
 
-void info(const char* format, ...) {
-    va_list args;
-    va_start(args, format);
-    log("info", format, args);
-    va_end(args);
-}
-
-void debug(const char* format, ...) {
-    va_list args;
-    va_start(args, format);
-    log("debug", format, args);
-    va_end(args);
-}
-
-void warn(const char* format, ...) {
-    va_list args;
-    va_start(args, format);
-    log("warn", format, args);
-    va_end(args);
-}
-
-void error(const char* format, ...) {
-    va_list args;
-    va_start(args, format);
-    log("error", format, args);
-    va_end(args);
-}
-
-void log(const char* level, const char* format, va_list va) {
-    vsprintf(logBuff, format, va);
-    doc.clear();
-    doc["type"] = "log";
-    doc["level"] = level;
-    doc["message"] = logBuff;
-    serializeJson(doc, Serial);
-    Serial.println();
-}
