@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "driver/twai.h"
 #include <ArduinoJson.h>
-#include "constants.h"
+#include "util.h"
 #include "logging.h"
 
 #define TX_PIN GPIO_NUM_5
@@ -240,14 +240,13 @@ bool decodedMfStart() {
     if(!found) {
         return false;
     }
+    debugBMessage("MultiFrameStart");
+    bResult.attr = attr;
+    bResult.totBytes = bMessage.data[0];
     if(!sendAck()) {
         return false;
     }
-    int totBytesExpected = bMessage.data[0];
-    bResult.totBytes = totBytesExpected;
-    bResult.attr = attr;
-    debugBMessage("MultiFrameStart");
-    debug("Total bytes expected = %d", totBytesExpected);
+    debug("Total bytes expected = %d", bMessage.data[0]);
     return true;
 }
 
@@ -261,11 +260,11 @@ bool decodedMfFrame() {
     ) {
       return false;
     }
+    debugBMessage("MultiFrame");
+    saveMfBytes();
     if(!sendAck()) {
         return false;
     }
-    saveMfBytes();
-    debugBMessage("MultiFrame");
     debug("Total bytes saved/expected = %d/%d.", bResult.rcvdBytes, bResult.totBytes);
     return true;
 }
@@ -275,7 +274,7 @@ bool sendAck() {
         return false;
     }
     twai_message_t tx = {};
-    tx.identifier = 0x85126010;
+    tx.identifier = bafangCanAckId(*bResult.attr);
     tx.extd = 1;
     tx.rtr = 0;
     tx.data_length_code = 0;
@@ -290,7 +289,7 @@ bool sendAck() {
 void saveMfBytes() {
     uint8_t frmIdx = bMessage.subCmd;
     if(bResult.rcvdFrames[frmIdx]) {
-        warn("Duplicate frame received: %d.", frmIdx);
+        warn("Duplicate frame #%d received from CAN, ignoring.", frmIdx);
         return;
     }
     bResult.rcvdFrames[frmIdx] = true;

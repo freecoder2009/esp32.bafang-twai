@@ -10,8 +10,9 @@ struct CanCommand {
   uint32_t id;
 };
 
-// id calculator for read operation
+uint32_t bafangCanId(const int source, const int target, const int op, int cmd, int subCmd);
 uint32_t bafangCanReadId(const CanAttr &canAttr);
+uint32_t bafangCanAckId(const CanAttr &canAttr);
 
 // CAN system component codes
 const int CAN_TORQUE_SENSOR = 0x01;
@@ -44,11 +45,32 @@ const int CAN_SUPPORTED_COMMANDS_COUNT = sizeof(CAN_SUPPORTED_COMMANDS) / sizeof
 
 // read id calculator
 uint32_t bafangCanReadId(const CanAttr &canAttr) {
-    uint8_t b0 = 0x80 | (CAN_BESST & 0x0F);
-    uint8_t b1 = ((CAN_DRIVE_UNIT & 0x1F) << 3) | (CAN_READ_CMD & 0x07);
+    return bafangCanId(
+        CAN_BESST, 
+        CAN_DRIVE_UNIT, 
+        CAN_READ_CMD, 
+        canAttr.cmd, 
+        canAttr.subCmd
+    );
+}
+
+// read id calculator
+uint32_t bafangCanAckId(const CanAttr &canAttr) {
+    return bafangCanId(
+        CAN_BESST, 
+        CAN_DRIVE_UNIT, 
+        CAN_NORMAL_ACK, 
+        canAttr.cmd, 
+        canAttr.subCmd
+    );
+}
+
+uint32_t bafangCanId(const int source, const int target, const int op, int cmd, int subCmd) {
+    uint8_t b0 = 0x80 | (source & 0x0F);
+    uint8_t b1 = ((target & 0x1F) << 3) | (op & 0x07);
     return ((uint32_t)b0 << 24) |
            ((uint32_t)b1 << 16) |
-           ((uint32_t)canAttr.cmd << 8) |
-           canAttr.subCmd;
+           ((uint32_t)cmd << 8) |
+           subCmd;
 }
 
