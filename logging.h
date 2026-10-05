@@ -11,11 +11,7 @@ const int MAX_LOG_BUFF_LEN = 512;
 char logBuff[MAX_LOG_BUFF_LEN];
 JsonDocument logDoc;
 
-void log(const int level, const char* format, va_list va) {
-    if(LOG_LEVEL > level) {
-      return;
-    }
-    vsprintf(logBuff, format, va);
+void logToSerial(const int level) {
     logDoc.clear();
     logDoc["type"] = "log";
     logDoc["time"] = millis();
@@ -25,30 +21,54 @@ void log(const int level, const char* format, va_list va) {
     Serial.println();
 }
 
-void debug(const char* format, ...) {
+void vlog(const int level, const char* format, va_list va) {
+    vsprintf(logBuff, format, va);
+    logToSerial(level);
+}
+
+void log(const int level, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    log(LOG_DEBUG, format, args);
+    vlog(level, format, args);
+    va_end(args);
+}
+
+void debug(const char* format, ...) {
+    if(LOG_LEVEL > LOG_DEBUG) {
+        return;
+    }
+    va_list args;
+    va_start(args, format);
+    vlog(LOG_DEBUG, format, args);
     va_end(args);
 }
 
 void info(const char* format, ...) {
+    if(LOG_LEVEL > LOG_INFO) {
+        return;
+    }
     va_list args;
     va_start(args, format);
-    log(LOG_INFO, format, args);
+    vlog(LOG_INFO, format, args);
     va_end(args);
 }
 
 void warn(const char* format, ...) {
+    if(LOG_LEVEL > LOG_WARN) {
+        return;
+    }
     va_list args;
     va_start(args, format);
-    log(LOG_WARN, format, args);
+    vlog(LOG_WARN, format, args);
     va_end(args);
 }
 
 void error(const char* format, ...) {
+    if(LOG_LEVEL > LOG_ERROR) {
+        return;
+    }
     va_list args;
     va_start(args, format);
-    log(LOG_ERROR, format, args);
+    vlog(LOG_ERROR, format, args);
     va_end(args);
 }
