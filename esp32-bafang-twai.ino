@@ -9,6 +9,7 @@
 
 const int MAX_BUFF_LEN = 512;
 const int MAX_RESULT_BUFF_LEN = 128;
+const int MAX_RESULT_FRAME_CNT = MAX_RESULT_BUFF_LEN/8 + 1;
 const unsigned long MAX_CAN_LOCK_MILLIS = 2000;
 
 struct BafangMessage {
@@ -26,6 +27,7 @@ struct BafangResult {
     const CanAttr* attr;
     int totBytes;
     int rcvdBytes;
+    bool rcvdFrames[MAX_RESULT_FRAME_CNT];
     uint8_t data[MAX_RESULT_BUFF_LEN];
 };
 
@@ -166,6 +168,9 @@ void initBResult() {
     for (int i=0 ; i<MAX_RESULT_BUFF_LEN ; i++) {
         bResult.data[i] = NULL;
     }
+    for (int i=0 ; i<MAX_RESULT_FRAME_CNT ; i++) {
+        bResult.rcvdFrames[i] = false;
+    }
 }
 
 bool canReceiveMsg() {
@@ -283,12 +288,15 @@ bool sendAck() {
 }
 
 void saveMfBytes() {
-    int frmIdx = bMessage.subCmd;
+    uint8_t frmIdx = bMessage.subCmd;
+    if(bResult.rcvdFrames[frmIdx]) {
+        warn("Duplicate frame received: %d.", frmIdx);
+        return;
+    }
+    bResult.rcvdFrames[frmIdx] = true;
     for (int i=0 ; i<bMessage.dlc ; i++) {
         bResult.data[frmIdx*8 + i] = bMessage.data[i];
     }
-    // should not add if this frame was received before
-    // (may happen if controller retries send)
     bResult.rcvdBytes += bMessage.dlc;
 }
 
