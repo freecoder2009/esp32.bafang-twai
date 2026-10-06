@@ -1,3 +1,6 @@
+const int MAX_RESULT_BUFF_LEN = 128;
+const int MAX_RESULT_FRAME_CNT = MAX_RESULT_BUFF_LEN/8 + 1;
+
 // types
 struct CanAttr {
   const char* name;
@@ -8,6 +11,23 @@ struct CanCommand {
   const CanAttr* attr;
   const char* action;
   uint32_t id;
+};
+struct BafangMessage {
+    uint32_t id;
+    uint8_t source;
+    uint8_t target;
+    uint8_t op;
+    uint8_t cmd;
+    uint8_t subCmd;
+    uint8_t dlc;
+    uint8_t data[8];
+};
+struct BafangResult {
+    const CanAttr* attr;
+    int totBytes;
+    int rcvdBytes;
+    bool rcvdFrames[MAX_RESULT_FRAME_CNT];
+    uint8_t data[MAX_RESULT_BUFF_LEN];
 };
 
 uint32_t bafangCanId(const int source, const int target, const int op, int cmd, int subCmd);
@@ -43,7 +63,6 @@ const CanCommand CAN_SUPPORTED_COMMANDS[] = {
 };
 const int CAN_SUPPORTED_COMMANDS_COUNT = sizeof(CAN_SUPPORTED_COMMANDS) / sizeof(CAN_SUPPORTED_COMMANDS[0]);
 
-// read id calculator
 uint32_t bafangCanReadId(const CanAttr &canAttr) {
     return bafangCanId(
         CAN_BESST, 
@@ -53,8 +72,6 @@ uint32_t bafangCanReadId(const CanAttr &canAttr) {
         canAttr.subCmd
     );
 }
-
-// read id calculator
 uint32_t bafangCanAckId(const CanAttr &canAttr) {
     return bafangCanId(
         CAN_BESST, 
@@ -64,7 +81,6 @@ uint32_t bafangCanAckId(const CanAttr &canAttr) {
         canAttr.subCmd
     );
 }
-
 uint32_t bafangCanId(const int source, const int target, const int op, int cmd, int subCmd) {
     uint8_t b0 = 0x80 | (source & 0x0F);
     uint8_t b1 = ((target & 0x1F) << 3) | (op & 0x07);

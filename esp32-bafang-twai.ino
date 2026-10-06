@@ -7,31 +7,10 @@
 #define TX_PIN GPIO_NUM_5
 #define RX_PIN GPIO_NUM_4
 
-const int MAX_BUFF_LEN = 512;
-const int MAX_RESULT_BUFF_LEN = 128;
-const int MAX_RESULT_FRAME_CNT = MAX_RESULT_BUFF_LEN/8 + 1;
+const int MAX_SERIAL_BUFF_LEN = 512;
 const unsigned long MAX_CAN_LOCK_MILLIS = 2000;
 
-struct BafangMessage {
-    uint32_t id;
-    uint8_t source;
-    uint8_t target;
-    uint8_t op;
-    uint8_t cmd;
-    uint8_t subCmd;
-    uint8_t dlc;
-    uint8_t data[8];
-};
-
-struct BafangResult {
-    const CanAttr* attr;
-    int totBytes;
-    int rcvdBytes;
-    bool rcvdFrames[MAX_RESULT_FRAME_CNT];
-    uint8_t data[MAX_RESULT_BUFF_LEN];
-};
-
-char serialBuff[MAX_BUFF_LEN];
+char serialBuff[MAX_SERIAL_BUFF_LEN];
 bool canLocked = false;
 unsigned long canLockedAt = 0;
 BafangMessage bMessage{};
@@ -88,7 +67,7 @@ boolean readSerialLine() {
       idx = 0;
       return true;
     }
-    if(idx < MAX_BUFF_LEN-1) {
+    if(idx < MAX_SERIAL_BUFF_LEN-1) {
       serialBuff[idx++] = c;
     }
   }
@@ -240,7 +219,7 @@ bool decodedMfStart() {
     if(!found) {
         return false;
     }
-    debugBMessage("MultiFrameStart");
+    debugBMessage("MultiFrameStart", bMessage);
     bResult.attr = attr;
     bResult.totBytes = bMessage.data[0];
     if(!sendAck()) {
@@ -260,7 +239,7 @@ bool decodedMfFrame() {
     ) {
       return false;
     }
-    debugBMessage("MultiFrame");
+    debugBMessage("MultiFrame", bMessage);
     saveMfBytes();
     if(!sendAck()) {
         return false;
@@ -308,21 +287,13 @@ bool completedMf() {
 }
 
 void returnBResult() {
-    debugBResult("Returning");
+    debugBResult("Returning", bResult);
     canUnlock();
 }
 
 bool canLockedForTooLong() {
     return canLocked && 
         (millis() - canLockedAt >= MAX_CAN_LOCK_MILLIS);
-}
-
-bool decodeMfParam1() {
-    return false;
-}
-
-void returnParam1() {
-    canUnlock();
 }
 
 void canLock() {
@@ -342,32 +313,3 @@ void errorUnlock(const char* format, ...) {
     va_end(args);
     canUnlock();
 }
-
-void debugBMessage(char* text) {
-    if(LOG_LEVEL > LOG_DEBUG) {
-      return;
-    }
-    char data[bMessage.dlc*3 + 10];
-    for (int i=0; i<bMessage.dlc; i++) {
-        sprintf(data+3*i, "%02X ", bMessage.data[i]);
-    }
-    log(LOG_DEBUG, "%s: ID=%08lX SRC=%02X DST=%02X DLC=%d OP=%02X CMD=%02X SUB=%02X DATA=%s",
-        text, bMessage.id, bMessage.source, bMessage.target, bMessage.dlc,
-        bMessage.op, bMessage.cmd, bMessage.subCmd, data
-    );
-}
-
-void debugBResult(char* text) {
-    if(LOG_LEVEL > LOG_DEBUG) {
-        return;
-    }
-    char data[bResult.totBytes*3 + 10];
-    for (int i=0; i<bResult.totBytes; i++) {
-        sprintf(data+3*i, "%02X ", bResult.data[i]);
-    }
-    log(LOG_DEBUG, "%s: FIELD=%s CMD=%02X SUB=%02X BYTES:%d DATA=%s",
-        text, bResult.attr->name, bResult.attr->cmd, 
-        bResult.attr->subCmd, bResult.totBytes, data
-    );
-}
-

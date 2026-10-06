@@ -72,3 +72,31 @@ void error(const char* format, ...) {
     vlog(LOG_ERROR, format, args);
     va_end(args);
 }
+
+void debugBMessage(char* text, BafangMessage &bMessage) {
+    if(LOG_LEVEL > LOG_DEBUG) {
+      return;
+    }
+    char data[bMessage.dlc*3 + 10];
+    for (int i=0; i<bMessage.dlc; i++) {
+        sprintf(data+3*i, "%02X ", bMessage.data[i]);
+    }
+    log(LOG_DEBUG, "%s: ID=%08lX SRC=%02X DST=%02X DLC=%d OP=%02X CMD=%02X SUB=%02X DATA=%s",
+        text, bMessage.id, bMessage.source, bMessage.target, bMessage.dlc,
+        bMessage.op, bMessage.cmd, bMessage.subCmd, data
+    );
+}
+
+void debugBResult(char* text, BafangResult &bResult) {
+    if(LOG_LEVEL > LOG_DEBUG) {
+        return;
+    }
+    char data[bResult.totBytes*3 + 10];
+    for (int i=0; i<bResult.totBytes; i++) {
+        sprintf(data+3*i, "%02X ", bResult.data[i]);
+    }
+    log(LOG_DEBUG, "%s: FIELD=%s CMD=%02X SUB=%02X BYTES:%d DATA=%s",
+        text, bResult.attr->name, bResult.attr->cmd, 
+        bResult.attr->subCmd, bResult.totBytes, data
+    );
+}
