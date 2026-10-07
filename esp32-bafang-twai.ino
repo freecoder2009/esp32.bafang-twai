@@ -109,17 +109,17 @@ bool lockForSupportedCommand() {
     return false;
 }
 
-bool lockForReq(CanCommand param) {
+bool lockForReq(CanCommand canCmd) {
     if(canLocked) {
         return false;
     }
     if(!doc["type"] || strcmp("req", doc["type"]) != 0) {
         return false;
     }
-    if(!doc["field"] || strcmp(param.attr->name, doc["field"]) != 0) {
+    if(!doc["field"] || strcmp(canCmd.attr->name, doc["field"]) != 0) {
         return false;
     }
-    if(!doc["action"] || strcmp(param.action, doc["action"]) != 0) {
+    if(!doc["action"] || strcmp(canCmd.action, doc["action"]) != 0) {
         return false;
     }
     canLock();
@@ -288,7 +288,41 @@ bool completedMf() {
 
 void returnBResult() {
     debugBResult("Returning", bResult);
+    doc.clear();
+    doc["type"] = "result";
+    doc["field"] = bResult.attr->name;
+    doc["cmd"] = bResult.attr->cmd;
+    doc["subCmd"] = bResult.attr->subCmd;
+    decodeCanData();
+    serializeJson(doc, Serial);
+    Serial.println();
     canUnlock();
+}
+
+void decodeCanData() {
+    if(strcmp(bResult.attr->name, CAN_PARAM0.name) == 0) {
+        decodeCanParam0();
+    }
+}
+
+void decodeCanParam0() {
+    doc["data"]["speedLim"] = bResult.data[0];
+    for (int i = 0; i < 9; i++) {
+        doc["data"]["accel"][i] = bResult.data[1 + i];
+    }
+    for (int i = 0; i < 9; i++) {
+        int offset = 10 + i * 2;
+        doc["data"]["assist"][i] =
+            (uint16_t)bResult.data[offset] |
+            ((uint16_t)bResult.data[offset + 1] << 8);
+    }
+    doc["data"]["assistUpLim"] =
+        (uint16_t)bResult.data[28] |
+        ((uint16_t)bResult.data[29] << 8);
+    for (int i = 30; i <= 62; i++) {
+        doc["data"]["unknown"][i-30] = bResult.data[i];
+    }
+    doc["data"]["checksum"] = bResult.data[63];
 }
 
 bool canLockedForTooLong() {
