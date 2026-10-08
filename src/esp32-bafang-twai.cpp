@@ -1,6 +1,7 @@
 #include <Arduino.h>
-#include "driver/twai.h"
 #include <ArduinoJson.h>
+#include "driver/twai.h"
+#include "prototypes.h"
 #include "util.h"
 #include "logging.h"
 
@@ -57,7 +58,7 @@ void loop() {
     }
 }
 
-boolean readSerialLine() {
+bool readSerialLine() {
   char c;
   int idx = 0;
   while(Serial.available()) {
@@ -145,7 +146,7 @@ void initBResult() {
     bResult.totBytes = -1;
     bResult.rcvdBytes = 0;
     for (int i=0 ; i<MAX_RESULT_BUFF_LEN ; i++) {
-        bResult.data[i] = NULL;
+        bResult.data[i] = 0;
     }
     for (int i=0 ; i<MAX_RESULT_FRAME_CNT ; i++) {
         bResult.rcvdFrames[i] = false;

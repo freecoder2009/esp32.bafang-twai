@@ -1,4 +1,7 @@
+#pragma once
+
 #include <ArduinoJson.h>
+#include "prototypes.h"
 
 const int LOG_DEBUG = 1;
 const int LOG_INFO = 2;
@@ -73,7 +76,7 @@ void error(const char* format, ...) {
     va_end(args);
 }
 
-void debugBMessage(char* text, BafangMessage &bMessage) {
+void debugBMessage(const char* text, BafangMessage &bMessage) {
     if(LOG_LEVEL > LOG_DEBUG) {
       return;
     }
@@ -87,7 +90,7 @@ void debugBMessage(char* text, BafangMessage &bMessage) {
     );
 }
 
-void debugBResult(char* text, BafangResult &bResult) {
+void debugBResult(const char* text, BafangResult &bResult) {
     if(LOG_LEVEL > LOG_DEBUG) {
         return;
     }

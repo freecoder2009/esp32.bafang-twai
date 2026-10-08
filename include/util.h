@@ -1,3 +1,7 @@
+#pragma once
+
+#include "prototypes.h"
+
 const int MAX_RESULT_BUFF_LEN = 128;
 const int MAX_RESULT_FRAME_CNT = MAX_RESULT_BUFF_LEN/8 + 1;
 
@@ -89,4 +93,3 @@ uint32_t bafangCanId(const int source, const int target, const int op, int cmd, 
            ((uint32_t)cmd << 8) |
            subCmd;
 }
-
