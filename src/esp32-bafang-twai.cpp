@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include "driver/twai.h"
+#include "types.h"
 #include "prototypes.h"
 #include "util.h"
 #include "logging.h"

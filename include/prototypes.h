@@ -1,6 +1,7 @@
 #pragma once
 
 struct CanCommand;
+struct CanAttr;
 
 bool readSerialLine();
 bool requireCanUnlocked();
@@ -25,3 +26,9 @@ bool canLockedForTooLong();
 void canLock();
 void canUnlock();
 void errorUnlock(const char* format, ...);
+
+uint32_t bafangCanId(const int source, const int target, const int op, int cmd, int subCmd);
+uint32_t bafangCanReadId(const CanAttr &canAttr);
+uint32_t bafangCanWriteId(const CanAttr &canAttr);
+uint32_t bafangCanAckId(const CanAttr &canAttr);
+
