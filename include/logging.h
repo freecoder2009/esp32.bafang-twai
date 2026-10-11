@@ -1,17 +1,17 @@
 #pragma once
 
 #include <ArduinoJson.h>
+#include "types.h"
 #include "prototypes.h"
+
+extern const int LOG_LEVEL;
 
 const int LOG_DEBUG = 1;
 const int LOG_INFO = 2;
 const int LOG_WARN = 3;
 const int LOG_ERROR = 4;
 
-const int LOG_LEVEL = LOG_DEBUG;
-const int MAX_LOG_BUFF_LEN = 512;
-
-char logBuff[MAX_LOG_BUFF_LEN];
+char logBuff[256];
 JsonDocument logDoc;
 
 void logToSerial(const int level) {

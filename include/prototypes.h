@@ -1,7 +1,12 @@
 #pragma once
 
+#include "types.h"
+
 struct CanCommand;
 struct CanAttr;
+struct BafangMessage;
+struct BafangReadBuffer;
+struct BafangWriteBuffer;
 
 bool readSerialLine();
 bool requireCanUnlocked();
@@ -32,4 +37,3 @@ uint32_t bafangCanId(const int source, const int target, const int op, int cmd, 
 uint32_t bafangCanReadId(const CanAttr &canAttr);
 uint32_t bafangCanWriteId(const CanAttr &canAttr);
 uint32_t bafangCanAckId(const CanAttr &canAttr);
-

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "prototypes.h"
 #include "types.h"
+#include "prototypes.h"
 
 // CAN system component codes
 const int CAN_TORQUE_SENSOR = 0x01;

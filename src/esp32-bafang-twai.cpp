@@ -9,6 +9,8 @@
 #define TX_PIN GPIO_NUM_5
 #define RX_PIN GPIO_NUM_4
 
+const int LOG_LEVEL = LOG_DEBUG;
+
 const int MAX_SERIAL_BUFF_LEN = 512;
 const unsigned long MAX_CAN_LOCK_MILLIS = 2000;
 
