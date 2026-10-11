@@ -25,7 +25,7 @@ const CanAttr CAN_PARAM0 { .name="param0", .cmd=0x60, .subCmd=0x10 };
 const CanAttr CAN_PARAM1 { .name="param1", .cmd=0x60, .subCmd=0x11 };
 
 const CanCommand CAN_PARAM0_READ { .attr=&CAN_PARAM0, .action="read", .id=bafangCanReadId(CAN_PARAM0) };
-const CanCommand CAN_PARAM1_READ { .attr=&CAN_PARAM1, .action="read", .id=bafangCanReadId(CAN_PARAM1) };
+const CanCommand CAN_PARAM0_WRITE { .attr=&CAN_PARAM0, .action="write", .id=bafangCanWriteId(CAN_PARAM0) };
 
 const CanCommand CAN_SUPPORTED_COMMANDS[] = {
     CAN_PARAM0_READ
@@ -37,6 +37,15 @@ uint32_t bafangCanReadId(const CanAttr &canAttr) {
         CAN_BESST, 
         CAN_DRIVE_UNIT, 
         CAN_READ_CMD, 
+        canAttr.cmd, 
+        canAttr.subCmd
+    );
+}
+uint32_t bafangCanWriteId(const CanAttr &canAttr) {
+    return bafangCanId(
+        CAN_BESST, 
+        CAN_DRIVE_UNIT, 
+        CAN_WRITE_CMD, 
         canAttr.cmd, 
         canAttr.subCmd
     );

@@ -1,0 +1,49 @@
+# read param0 - multiframes
+TX Parameter0 read: 85116010 ... sending.
+TX Parameter0 read: 85116010 ... sent.
+Message: ID=022C6010 SRC=02 DST=05 DLC=1 OP=04 CMD=60 SUB=10 DATA=40 
+ACK sending...sent.
+printParam0
+Message: ID=022D0000 SRC=02 DST=05 DLC=8 OP=05 CMD=00 SUB=00 DATA=32 01 02 02 03 03 03 04 
+ACK sending...sent.
+printParam0
+Message: ID=022D0001 SRC=02 DST=05 DLC=8 OP=05 CMD=00 SUB=01 DATA=04 05 1E 00 3C 00 64 00 
+ACK sending...sent.
+printParam0
+Message: ID=022D0002 SRC=02 DST=05 DLC=8 OP=05 CMD=00 SUB=02 DATA=8C 00 AA 00 C8 00 F0 00 
+ACK sending...sent.
+printParam0
+Message: ID=022D0003 SRC=02 DST=05 DLC=8 OP=05 CMD=00 SUB=03 DATA=22 01 54 01 F4 01 32 14 
+ACK sending...sent.
+printParam0
+Message: ID=022D0004 SRC=02 DST=05 DLC=8 OP=05 CMD=00 SUB=04 DATA=00 00 00 00 00 00 00 00 
+ACK sending...sent.
+printParam0
+Message: ID=022D0005 SRC=02 DST=05 DLC=8 OP=05 CMD=00 SUB=05 DATA=00 04 0F 0F 0F 0F 0F 0A 
+ACK sending...sent.
+printParam0
+Message: ID=022D0006 SRC=02 DST=05 DLC=8 OP=05 CMD=00 SUB=06 DATA=0A 08 06 F4 01 01 05 F4 
+ACK sending...sent.
+printParam0
+Message: ID=022E0007 SRC=02 DST=05 DLC=8 OP=06 CMD=00 SUB=07 DATA=01 60 09 60 09 60 09 00 
+ACK sending...sent.
+printParam0
+
+
+# read param0 raw data
+{"type":"log","time":8588,"level":1,"message":"Returning: FIELD=param0 CMD=60 SUB=10 BYTES:64 DATA=32 01 02 02 03 03 03 04 04 05 1E 00 3C 00 64 00 8C 00 AA 00 C8 00 F0 00 22 01 54 01 F4 01 32 14 00 00 00 00 00 00 00 00 00 04 0F 0F 0F 0F 0F 0A 0A 08 06 F4 01 01 05 F4 01 60 09 60 09 60 09 00 "}
+
+
+# read param0 parsed
+{"type":"result","field":"param0","cmd":96,"subCmd":16,"data":{"speedLim":50,"accel":[1,2,2,3,3,3,4,4,5],"assist":[30,60,100,140,170,200,240,290,340],"assistUpLim":500,"unknown":[50,20,0,0,0,0,0,0,0,0,0,4,15,15,15,15,15,10,10,8,6,244,1,1,5,244,1,96,9,96,9,96,9],"checksum":0}}
+
+{"type":"result","field":"param0","cmd":96,"subCmd":16,
+    "data":{
+        "speedLim":50,
+        "accel":[1,2,2,3,3,3,4,4,5],
+        "assist":[30,60,100,140,170,200,240,290,340],
+        "assistUpLim":500,
+        "unknown":[50,20,0,0,0,0,0,0,0,0,0,4,15,15,15,15,15,10,10,8,6,244,1,1,5,244,1,96,9,96,9,96,9],
+        "checksum":0
+    }
+}

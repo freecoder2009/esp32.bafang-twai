@@ -90,16 +90,16 @@ void debugBMessage(const char* text, BafangMessage &bMessage) {
     );
 }
 
-void debugBResult(const char* text, BafangResult &bResult) {
+void debugBResult(const char* text, BafangReadBuffer &bReadBuffer) {
     if(LOG_LEVEL > LOG_DEBUG) {
         return;
     }
-    char data[bResult.totBytes*3 + 10];
-    for (int i=0; i<bResult.totBytes; i++) {
-        sprintf(data+3*i, "%02X ", bResult.data[i]);
+    char data[bReadBuffer.totBytes*3 + 10];
+    for (int i=0; i<bReadBuffer.totBytes; i++) {
+        sprintf(data+3*i, "%02X ", bReadBuffer.data[i]);
     }
     log(LOG_DEBUG, "%s: FIELD=%s CMD=%02X SUB=%02X BYTES:%d DATA=%s",
-        text, bResult.attr->name, bResult.attr->cmd, 
-        bResult.attr->subCmd, bResult.totBytes, data
+        text, bReadBuffer.attr->name, bReadBuffer.attr->cmd, 
+        bReadBuffer.attr->subCmd, bReadBuffer.totBytes, data
     );
 }

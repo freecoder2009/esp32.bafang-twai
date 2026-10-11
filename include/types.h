@@ -28,10 +28,20 @@ struct BafangMessage {
     uint8_t data[8];
 };
 
-struct BafangResult {
+struct BafangReadBuffer {
+    uint32_t id;
     const CanAttr* attr;
     int totBytes;
     int rcvdBytes;
     bool rcvdFrames[MAX_RESULT_FRAME_CNT];
+    uint8_t data[MAX_RESULT_BUFF_LEN];
+};
+
+struct BafangWriteBuffer {
+    uint32_t id;
+    const CanAttr* attr;
+    int totBytes;
+    int sentBytes;
+    bool sentFrames[MAX_RESULT_FRAME_CNT];
     uint8_t data[MAX_RESULT_BUFF_LEN];
 };

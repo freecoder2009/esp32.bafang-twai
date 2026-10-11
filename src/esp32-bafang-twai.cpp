@@ -13,10 +13,13 @@ const int MAX_SERIAL_BUFF_LEN = 512;
 const unsigned long MAX_CAN_LOCK_MILLIS = 2000;
 
 char serialBuff[MAX_SERIAL_BUFF_LEN];
-bool canLocked = false;
+bool canLockedRead = false;
+bool canLockedWrite = false;
+CanCommand *canLockedForCmd = nullptr;
 unsigned long canLockedAt = 0;
+BafangReadBuffer bReadBuffer{};
+BafangWriteBuffer bWriteBuffer{};
 BafangMessage bMessage{};
-BafangResult bResult{};
 
 JsonDocument doc;
 
@@ -44,15 +47,19 @@ void loop() {
     if(readSerialLine()
         && requireCanUnlocked()
         && parseSerialLine()
-        && lockForSupportedCommand()
+        && lockForSupportedCmd()
     ) {
-        initBResult();
+        prepareLockedCmd();
     }
-    if(canReceiveMsg()
+    if(canLockedRead
+        && canReceiveMsg()
         && decodedMf()
         && completedMf()
     ) {
         returnBResult();
+    }
+    if(canLockedWrite) {
+        //returnBResult();
     }
     if(canLockedForTooLong()) {
         errorUnlock("Timeout waiting multiframes.");
@@ -77,7 +84,7 @@ bool readSerialLine() {
 }
 
 bool requireCanUnlocked() {
-    if(canLocked) {
+    if(canLockedRead || canLockedWrite) {
         warn("CAN is already locked.");
         return false;
     }
@@ -93,15 +100,15 @@ bool parseSerialLine() {
     return true;
 }
 
-bool lockForSupportedCommand() {
-    CanCommand request;
+bool lockForSupportedCmd() {
+    if(canLockedRead || canLockedWrite) {
+        return false;
+    }
+    CanCommand canCmd;
     for(int i=0 ; i<CAN_SUPPORTED_COMMANDS_COUNT ; i++) {
-        request = CAN_SUPPORTED_COMMANDS[i];
-        if(!lockForReq(request)) {
+        canCmd = CAN_SUPPORTED_COMMANDS[i];
+        if(!canLockByCmd(canCmd)) {
             continue;
-        }
-        if(!canSendReq(request)) {
-            return false;
         }
         // takes 400ms for some reason
         //debug("Locked for request: %s.", serialBuff);
@@ -111,8 +118,8 @@ bool lockForSupportedCommand() {
     return false;
 }
 
-bool lockForReq(CanCommand canCmd) {
-    if(canLocked) {
+bool canLockByCmd(CanCommand canCmd) {
+    if(canLockedRead || canLockedWrite) {
         return false;
     }
     if(!doc["type"] || strcmp("req", doc["type"]) != 0) {
@@ -124,38 +131,92 @@ bool lockForReq(CanCommand canCmd) {
     if(!doc["action"] || strcmp(canCmd.action, doc["action"]) != 0) {
         return false;
     }
-    canLock();
-    return true;
+    if(strcmp(canCmd.action, "read")) {
+        canLockedRead = true;
+        canLockedAt = millis();
+        canLockedForCmd = &canCmd;
+        return true;
+    }
+    if(strcmp(canCmd.action, "write")) {
+        canLockedWrite = true;
+        canLockedAt = millis();
+        canLockedForCmd = &canCmd;
+        return true;
+    }
+    return false;
 }
 
-bool canSendReq(CanCommand canCmd) {
+void prepareLockedCmd() {
+    if(canLockedRead) {
+        canSendReadReq()
+        && cleanReadBuffer();
+    }
+    if(canLockedWrite) {
+        //loadWriteBuffer()
+        //&& canSendMfStart();
+    }
+}
+
+bool canSendReadReq() {
+    if(!canLockedRead) {
+        error("Not locked for read.");
+        return false;
+    }
     twai_message_t tx = {};
-    tx.identifier = canCmd.id;
+    tx.identifier = canLockedForCmd->id;
     tx.extd = 1;
     tx.rtr = 0;
     tx.data_length_code = 0;
     esp_err_t res = twai_transmit(&tx, pdMS_TO_TICKS(1000));
     if (res != ESP_OK) {
-        errorUnlock("Failed sending CAN request for %s: %d", canCmd.attr->name, res);
+        errorUnlock("Failed sending CAN request for %s: %d", canLockedForCmd->attr->name, res);
         return false;
     }
     return true;
 }
 
-void initBResult() {
-    bResult.attr = NULL;
-    bResult.totBytes = -1;
-    bResult.rcvdBytes = 0;
+bool cleanReadBuffer() {
+    if(!canLockedRead) {
+        error("Not locked for read.");
+        return false;
+    }
+    bReadBuffer.attr = NULL;
+    bReadBuffer.totBytes = -1;
+    bReadBuffer.rcvdBytes = 0;
     for (int i=0 ; i<MAX_RESULT_BUFF_LEN ; i++) {
-        bResult.data[i] = 0;
+        bReadBuffer.data[i] = 0;
     }
     for (int i=0 ; i<MAX_RESULT_FRAME_CNT ; i++) {
-        bResult.rcvdFrames[i] = false;
+        bReadBuffer.rcvdFrames[i] = false;
     }
+    return true;
 }
 
+bool loadWriteBuffer() {
+    if(!canLockedWrite) {
+        error("Not locked for write.");
+        return false;
+    }
+    bWriteBuffer.id = canLockedForCmd->id;
+    bWriteBuffer.attr = canLockedForCmd->attr;
+    //TODO
+}
+
+// void initWriteBuffer() {
+//     bWriteBuffer.id = -1;
+//     bWriteBuffer.attr = NULL;
+//     bWriteBuffer.totBytes = -1;
+//     bWriteBuffer.sentBytes = 0;
+//     for (int i=0 ; i<MAX_RESULT_FRAME_CNT ; i++) {
+//         bWriteBuffer.sentFrames[i] = false;
+//     }
+//     for (int i=0 ; i<MAX_RESULT_BUFF_LEN ; i++) {
+//         bWriteBuffer.data[i] = 0;
+//     }
+// }
+
 bool canReceiveMsg() {
-    if(!canLocked) {
+    if(!canLockedRead) {
         return false;
     }
     twai_message_t message;
@@ -192,7 +253,7 @@ boolean isCtrlerToBsst() {
 }
 
 bool decodedMf() {
-    if(!canLocked) {
+    if(!canLockedRead) {
         return false;
     }
     if(decodedMfStart() || decodedMfFrame()) {
@@ -202,7 +263,7 @@ bool decodedMf() {
 }
 
 bool decodedMfStart() {
-    if(!canLocked) {
+    if(!canLockedRead) {
         return false;
     }
     const CanAttr *attr;
@@ -222,8 +283,8 @@ bool decodedMfStart() {
         return false;
     }
     debugBMessage("MultiFrameStart", bMessage);
-    bResult.attr = attr;
-    bResult.totBytes = bMessage.data[0];
+    bReadBuffer.attr = attr;
+    bReadBuffer.totBytes = bMessage.data[0];
     if(!sendAck()) {
         return false;
     }
@@ -232,7 +293,7 @@ bool decodedMfStart() {
 }
 
 bool decodedMfFrame() {
-    if(!canLocked) {
+    if(!canLockedRead) {
         return false;
     }
     if(
@@ -246,16 +307,16 @@ bool decodedMfFrame() {
     if(!sendAck()) {
         return false;
     }
-    debug("Total bytes saved/expected = %d/%d.", bResult.rcvdBytes, bResult.totBytes);
+    debug("Total bytes saved/expected = %d/%d.", bReadBuffer.rcvdBytes, bReadBuffer.totBytes);
     return true;
 }
 
 bool sendAck() {
-    if(!canLocked) {
+    if(!canLockedRead) {
         return false;
     }
     twai_message_t tx = {};
-    tx.identifier = bafangCanAckId(*bResult.attr);
+    tx.identifier = bafangCanAckId(*bReadBuffer.attr);
     tx.extd = 1;
     tx.rtr = 0;
     tx.data_length_code = 0;
@@ -269,32 +330,32 @@ bool sendAck() {
 
 void saveMfBytes() {
     uint8_t frmIdx = bMessage.subCmd;
-    if(bResult.rcvdFrames[frmIdx]) {
+    if(bReadBuffer.rcvdFrames[frmIdx]) {
         warn("Duplicate frame #%d received from CAN, ignoring.", frmIdx);
         return;
     }
-    bResult.rcvdFrames[frmIdx] = true;
+    bReadBuffer.rcvdFrames[frmIdx] = true;
     for (int i=0 ; i<bMessage.dlc ; i++) {
-        bResult.data[frmIdx*8 + i] = bMessage.data[i];
+        bReadBuffer.data[frmIdx*8 + i] = bMessage.data[i];
     }
-    bResult.rcvdBytes += bMessage.dlc;
+    bReadBuffer.rcvdBytes += bMessage.dlc;
 }
 
 bool completedMf() {
-    return (
-        bResult.attr != NULL &&
-        bResult.totBytes > 0 &&
-        bResult.rcvdBytes == bResult.totBytes
+    return (canLockedRead &&
+        bReadBuffer.attr != NULL &&
+        bReadBuffer.totBytes > 0 &&
+        bReadBuffer.rcvdBytes == bReadBuffer.totBytes
     );
 }
 
 void returnBResult() {
-    debugBResult("Returning", bResult);
+    debugBResult("Returning", bReadBuffer);
     doc.clear();
     doc["type"] = "result";
-    doc["field"] = bResult.attr->name;
-    doc["cmd"] = bResult.attr->cmd;
-    doc["subCmd"] = bResult.attr->subCmd;
+    doc["field"] = bReadBuffer.attr->name;
+    doc["cmd"] = bReadBuffer.attr->cmd;
+    doc["subCmd"] = bReadBuffer.attr->subCmd;
     decodeCanData();
     serializeJson(doc, Serial);
     Serial.println();
@@ -302,44 +363,34 @@ void returnBResult() {
 }
 
 void decodeCanData() {
-    if(strcmp(bResult.attr->name, CAN_PARAM0.name) == 0) {
+    if(strcmp(bReadBuffer.attr->name, CAN_PARAM0.name) == 0) {
         decodeCanParam0();
     }
 }
 
 void decodeCanParam0() {
-    doc["data"]["speedLim"] = bResult.data[0];
+    doc["data"]["speedLim"] = bReadBuffer.data[0];
     for (int i = 0; i < 9; i++) {
-        doc["data"]["accel"][i] = bResult.data[1 + i];
+        doc["data"]["accel"][i] = bReadBuffer.data[1 + i];
     }
     for (int i = 0; i < 9; i++) {
         int offset = 10 + i * 2;
         doc["data"]["assist"][i] =
-            (uint16_t)bResult.data[offset] |
-            ((uint16_t)bResult.data[offset + 1] << 8);
+            (uint16_t)bReadBuffer.data[offset] |
+            ((uint16_t)bReadBuffer.data[offset + 1] << 8);
     }
     doc["data"]["assistUpLim"] =
-        (uint16_t)bResult.data[28] |
-        ((uint16_t)bResult.data[29] << 8);
+        (uint16_t)bReadBuffer.data[28] |
+        ((uint16_t)bReadBuffer.data[29] << 8);
     for (int i = 30; i <= 62; i++) {
-        doc["data"]["unknown"][i-30] = bResult.data[i];
+        doc["data"]["unknown"][i-30] = bReadBuffer.data[i];
     }
-    doc["data"]["checksum"] = bResult.data[63];
+    doc["data"]["checksum"] = bReadBuffer.data[63];
 }
 
 bool canLockedForTooLong() {
-    return canLocked && 
+    return (canLockedRead || canLockedWrite) && 
         (millis() - canLockedAt >= MAX_CAN_LOCK_MILLIS);
-}
-
-void canLock() {
-    canLocked = true;
-    canLockedAt = millis();
-}
-
-void canUnlock() {
-    canLocked = false;
-    canLockedAt = 0;
 }
 
 void errorUnlock(const char* format, ...) {
@@ -348,4 +399,11 @@ void errorUnlock(const char* format, ...) {
     vlog(LOG_ERROR, format, args);
     va_end(args);
     canUnlock();
+}
+
+void canUnlock() {
+    canLockedRead = false;
+    canLockedWrite = false;
+    canLockedForCmd = nullptr;
+    canLockedAt = 0;
 }
