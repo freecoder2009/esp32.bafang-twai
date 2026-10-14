@@ -38,10 +38,19 @@ uint32_t bafangCanWriteId(const CanAttr &canAttr) {
         canAttr.subCmd
     );
 }
-uint32_t bafangCanAckId(const CanAttr &canAttr) {
+uint32_t bafangCanReadAckId(const CanAttr &canAttr) {
     return bafangCanId(
         CAN_BESST, 
         CAN_DRIVE_UNIT, 
+        CAN_NORMAL_ACK, 
+        canAttr.cmd, 
+        canAttr.subCmd
+    );
+}
+uint32_t bafangCanWriteAckId(const CanAttr &canAttr) {
+    return bafangCanId(
+        CAN_DRIVE_UNIT,
+        CAN_BESST,
         CAN_NORMAL_ACK, 
         canAttr.cmd, 
         canAttr.subCmd

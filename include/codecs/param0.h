@@ -69,5 +69,16 @@ struct Param0 : CanAttr {
 
 const Param0 CAN_PARAM0;
 
-const CanCommand CAN_PARAM0_READ  { .attr=&CAN_PARAM0, .action="read",  .id=bafangCanReadId(CAN_PARAM0)  };
-const CanCommand CAN_PARAM0_WRITE { .attr=&CAN_PARAM0, .action="write", .id=bafangCanWriteId(CAN_PARAM0) };
+const CanCommand CAN_PARAM0_READ  {
+    .attr=&CAN_PARAM0,
+    .action="read", 
+    .id=bafangCanReadId(CAN_PARAM0),
+    .ackId=bafangCanReadAckId(CAN_PARAM0)
+};
+
+const CanCommand CAN_PARAM0_WRITE {
+    .attr=&CAN_PARAM0,
+    .action="write",
+    .id=bafangCanWriteId(CAN_PARAM0),
+    .ackId=bafangCanWriteAckId(CAN_PARAM0)
+};

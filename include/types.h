@@ -22,6 +22,7 @@ struct CanCommand {
   const CanAttr* attr;
   const char* action;
   uint32_t id;
+  uint32_t ackId;
 };
 
 struct CanMessage {

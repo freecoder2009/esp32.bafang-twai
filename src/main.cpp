@@ -18,6 +18,7 @@ const unsigned long MAX_CAN_LOCK_MILLIS = 2000;
 char serialBuff[MAX_SERIAL_BUFF_LEN];
 bool canLockedRead = false;
 bool canLockedWrite = false;
+bool readRequestSent = false;
 const CanCommand *canLockedForCmd = nullptr;
 unsigned long canLockedAt = 0;
 CanReadBuffer bReadBuffer{};
@@ -59,20 +60,27 @@ void loop() {
         && parseSerialLine()
         && lockForSupportedCmd()
     ) {
-        prepareLockedCmd();
+        prepareBuffer();
     }
     if(canLockedRead
+        && requireReadRequest()
         && canReceiveMsg()
         && decodeMf()
-        && completeMf()
+        && isCompleteMfRead()
     ) {
         returnBResult();
     }
-    if(canLockedWrite) {
-        //returnBResult();
+    /*
+    if(canLockedWrite
+        && requireStartMf()
+        && canReceiveAck()
+        && isCompleteOrWriteMf()
+    ) {
+        canUnlock();
     }
+    */
     if(canLockedForTooLong()) {
-        errorUnlock("Timeout while locked, aborting, unlocking.");
+        errorUnlock("Timeout while locked; aborting, unlocking.");
     }
 }
 
@@ -104,7 +112,7 @@ bool requireCanUnlocked() {
 bool parseSerialLine() {
     DeserializationError jsonParseError = deserializeJson(doc, serialBuff);
     if (jsonParseError) {
-        errorUnlock("Error deserializing: %s", jsonParseError.c_str());
+        error("Error deserializing: %s", jsonParseError.c_str());
         return false;
     }
     return true;
@@ -121,7 +129,7 @@ bool lockForSupportedCmd() {
         debug("Locked for request: %s.", serialBuff);
         return true;
     }
-    errorUnlock("Unrecognized request: %s.", serialBuff);
+    error("Unrecognized request: %s.", serialBuff);
     return false;
 }
 
@@ -153,21 +161,22 @@ bool canLockByCmd(const CanCommand *canCmd) {
     return false;
 }
 
-void prepareLockedCmd() {
+void prepareBuffer() {
     if(canLockedRead) {
-        canSendReadReq()
-        && cleanReadBuffer();
+        cleanReadBuffer();
     }
     if(canLockedWrite) {
         loadWriteBuffer();
-        //&& canSendMfStart();
     }
 }
 
-bool canSendReadReq() {
+bool requireReadRequest() {
     if(!canLockedRead) {
         error("Not locked for read.");
         return false;
+    }
+    if(readRequestSent) {
+        return true;
     }
     twai_message_t tx = {};
     tx.identifier = canLockedForCmd->id;
@@ -179,14 +188,11 @@ bool canSendReadReq() {
         errorUnlock("Failed sending CAN request for %s: %d", canLockedForCmd->attr->name, res);
         return false;
     }
+    readRequestSent = true;
     return true;
 }
 
-bool cleanReadBuffer() {
-    if(!canLockedRead) {
-        error("Not locked for read.");
-        return false;
-    }
+void cleanReadBuffer() {
     bReadBuffer.totBytes = -1;
     bReadBuffer.rcvdBytes = 0;
     for (int i=0 ; i<MAX_RESULT_BUFF_LEN ; i++) {
@@ -195,7 +201,6 @@ bool cleanReadBuffer() {
     for (int i=0 ; i<MAX_RESULT_FRAME_CNT ; i++) {
         bReadBuffer.rcvdFrames[i] = false;
     }
-    return true;
 }
 
 bool loadWriteBuffer() {
@@ -214,7 +219,7 @@ bool loadWriteBuffer() {
 }
 
 bool canReceiveMsg() {
-    if(!canLockedRead) {
+    if(!canLockedRead && !canLockedWrite) {
         return false;
     }
     twai_message_t message;
@@ -305,7 +310,7 @@ bool sendAck() {
         return false;
     }
     twai_message_t tx = {};
-    tx.identifier = canLockedForCmd->id;
+    tx.identifier = canLockedForCmd->ackId;
     tx.extd = 1;
     tx.rtr = 0;
     tx.data_length_code = 0;
@@ -334,7 +339,7 @@ void saveMfBytes() {
     bReadBuffer.rcvdBytes += bMessage.dlc;
 }
 
-bool completeMf() {
+bool isCompleteMfRead() {
     return (canLockedRead &&
         bReadBuffer.totBytes > 0 &&
         bReadBuffer.rcvdBytes == bReadBuffer.totBytes
@@ -354,6 +359,26 @@ void returnBResult() {
     canUnlock();
 }
 
+bool requireStartMf() {
+    // TODO
+    return true;
+}
+
+bool canReceiveAck() {
+    // TODO
+    // if it's a const int CAN_ERROR_ACK = 0x03; then stop, error and unlock
+    return true;
+}
+
+bool isCompleteOrWriteMf() {
+    // TODO
+    // return true if write is complete (all frames/bytes have been written)
+    //    in this case all frames should have been also acknowledged already
+    // otherwise write next frame and return false
+    // in case of error do error and unlock
+    return false;
+}
+
 bool canLockedForTooLong() {
     return (canLockedRead || canLockedWrite) && 
         (millis() - canLockedAt >= MAX_CAN_LOCK_MILLIS);
@@ -369,7 +394,9 @@ void errorUnlock(const char* format, ...) {
 
 void canUnlock() {
     canLockedRead = false;
+    readRequestSent = false;
     canLockedWrite = false;
     canLockedForCmd = nullptr;
     canLockedAt = 0;
+    debug("System unlocked.");
 }
