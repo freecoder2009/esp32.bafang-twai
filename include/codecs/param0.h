@@ -54,7 +54,16 @@ struct Param0 : CanAttr {
             offset = i-30;
             data[i] = doc["data"]["unknown"][offset].as<uint8_t>();
         }
-        data[63] = doc["data"]["checksum"].as<uint8_t>();
+        data[63] = checksum(data, 63);
+    }
+
+    private:
+    uint8_t checksum(uint8_t data[], int byteCnt) const {
+        uint16_t sum = 0;
+        for (int i=0; i<byteCnt; i++) {
+            sum += data[i];
+        }
+        return sum & 0xFF;
     }
 };
 
