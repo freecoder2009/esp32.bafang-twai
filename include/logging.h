@@ -11,7 +11,7 @@ const int LOG_INFO = 2;
 const int LOG_WARN = 3;
 const int LOG_ERROR = 4;
 
-char logBuff[256];
+char logBuff[512];
 JsonDocument logDoc;
 
 void logToSerial(const int level) {
@@ -76,30 +76,44 @@ void error(const char* format, ...) {
     va_end(args);
 }
 
-void debugBMessage(const char* text, BafangMessage &bMessage) {
+void debugBMessage(const char* text, const CanMessage *bMessage) {
     if(LOG_LEVEL > LOG_DEBUG) {
       return;
     }
-    char data[bMessage.dlc*3 + 10];
-    for (int i=0; i<bMessage.dlc; i++) {
-        sprintf(data+3*i, "%02X ", bMessage.data[i]);
+    char data[bMessage->dlc*3 + 10];
+    for (int i=0; i<bMessage->dlc; i++) {
+        sprintf(data+3*i, "%02X ", bMessage->data[i]);
     }
     log(LOG_DEBUG, "%s: ID=%08lX SRC=%02X DST=%02X DLC=%d OP=%02X CMD=%02X SUB=%02X DATA=%s",
-        text, bMessage.id, bMessage.source, bMessage.target, bMessage.dlc,
-        bMessage.op, bMessage.cmd, bMessage.subCmd, data
+        text, bMessage->id, bMessage->source, bMessage->target, bMessage->dlc,
+        bMessage->op, bMessage->cmd, bMessage->subCmd, data
     );
 }
 
-void debugBResult(const char* text, BafangReadBuffer &bReadBuffer) {
+void debugReadBuffer(const char* text, const CanCommand *canLockedForCmd, const CanReadBuffer *bReadBuffer) {
     if(LOG_LEVEL > LOG_DEBUG) {
         return;
     }
-    char data[bReadBuffer.totBytes*3 + 10];
-    for (int i=0; i<bReadBuffer.totBytes; i++) {
-        sprintf(data+3*i, "%02X ", bReadBuffer.data[i]);
+    char data[bReadBuffer->totBytes*3 + 10];
+    for (int i=0; i<bReadBuffer->totBytes; i++) {
+        sprintf(data+3*i, "%02X ", bReadBuffer->data[i]);
     }
     log(LOG_DEBUG, "%s: FIELD=%s CMD=%02X SUB=%02X BYTES:%d DATA=%s",
-        text, bReadBuffer.attr->name, bReadBuffer.attr->cmd, 
-        bReadBuffer.attr->subCmd, bReadBuffer.totBytes, data
+        text, canLockedForCmd->attr->name, canLockedForCmd->attr->cmd, 
+        canLockedForCmd->attr->subCmd, bReadBuffer->totBytes, data
+    );
+}
+
+void debugWriteBuffer(const char* text, const CanCommand *canLockedForCmd, const CanWriteBuffer *bWriteBuffer) {
+    if(LOG_LEVEL > LOG_DEBUG) {
+        return;
+    }
+    char data[bWriteBuffer->totBytes*3 + 10];
+    for (int i=0; i<bWriteBuffer->totBytes; i++) {
+        sprintf(data+3*i, "%02X ", bWriteBuffer->data[i]);
+    }
+    log(LOG_DEBUG, "%s: FIELD=%s CMD=%02X SUB=%02X BYTES:%d DATA=%s",
+        text, canLockedForCmd->attr->name, canLockedForCmd->attr->cmd, 
+        canLockedForCmd->attr->subCmd, bWriteBuffer->totBytes, data
     );
 }

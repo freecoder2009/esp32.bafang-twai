@@ -1,9 +1,10 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include "driver/twai.h"
-#include "types.h"
 #include "prototypes.h"
-#include "util.h"
+#include "types.h"
+#include "bafang.h"
+#include "codecs.h"
 #include "logging.h"
 
 #define TX_PIN GPIO_NUM_5
@@ -17,13 +18,20 @@ const unsigned long MAX_CAN_LOCK_MILLIS = 2000;
 char serialBuff[MAX_SERIAL_BUFF_LEN];
 bool canLockedRead = false;
 bool canLockedWrite = false;
-CanCommand *canLockedForCmd = nullptr;
+const CanCommand *canLockedForCmd = nullptr;
 unsigned long canLockedAt = 0;
-BafangReadBuffer bReadBuffer{};
-BafangWriteBuffer bWriteBuffer{};
-BafangMessage bMessage{};
+CanReadBuffer bReadBuffer{};
+CanWriteBuffer bWriteBuffer{};
+CanMessage bMessage{};
 
 JsonDocument doc;
+
+const CanCommand CAN_SUPPORTED_COMMANDS[] = {
+    CAN_PARAM0_READ, CAN_PARAM0_WRITE
+};
+const int CAN_SUPPORTED_COMMANDS_COUNT = 
+    sizeof(CAN_SUPPORTED_COMMANDS)
+    / sizeof(CAN_SUPPORTED_COMMANDS[0]);
 
 void setup() {
     Serial.begin(1000000);
@@ -55,8 +63,8 @@ void loop() {
     }
     if(canLockedRead
         && canReceiveMsg()
-        && decodedMf()
-        && completedMf()
+        && decodeMf()
+        && completeMf()
     ) {
         returnBResult();
     }
@@ -64,7 +72,7 @@ void loop() {
         //returnBResult();
     }
     if(canLockedForTooLong()) {
-        errorUnlock("Timeout waiting multiframes.");
+        errorUnlock("Timeout while locked, aborting, unlocking.");
     }
 }
 
@@ -106,43 +114,40 @@ bool lockForSupportedCmd() {
     if(canLockedRead || canLockedWrite) {
         return false;
     }
-    CanCommand canCmd;
     for(int i=0 ; i<CAN_SUPPORTED_COMMANDS_COUNT ; i++) {
-        canCmd = CAN_SUPPORTED_COMMANDS[i];
-        if(!canLockByCmd(canCmd)) {
+        if(!canLockByCmd(&CAN_SUPPORTED_COMMANDS[i])) {
             continue;
         }
-        // takes 400ms for some reason
-        //debug("Locked for request: %s.", serialBuff);
+        debug("Locked for request: %s.", serialBuff);
         return true;
     }
     errorUnlock("Unrecognized request: %s.", serialBuff);
     return false;
 }
 
-bool canLockByCmd(CanCommand canCmd) {
+bool canLockByCmd(const CanCommand *canCmd) {
     if(canLockedRead || canLockedWrite) {
         return false;
     }
     if(!doc["type"] || strcmp("req", doc["type"]) != 0) {
         return false;
     }
-    if(!doc["field"] || strcmp(canCmd.attr->name, doc["field"]) != 0) {
+    if(!doc["field"] || strcmp(canCmd->attr->name, doc["field"]) != 0) {
         return false;
     }
-    if(!doc["action"] || strcmp(canCmd.action, doc["action"]) != 0) {
+    if(!doc["action"] || strcmp(canCmd->action, doc["action"]) != 0) {
         return false;
     }
-    if(strcmp(canCmd.action, "read")) {
+    if(strcmp(canCmd->action, "read") == 0) {
         canLockedRead = true;
         canLockedAt = millis();
-        canLockedForCmd = &canCmd;
+        canLockedForCmd = canCmd;
         return true;
     }
-    if(strcmp(canCmd.action, "write")) {
+    if(strcmp(canCmd->action, "write") == 0) {
         canLockedWrite = true;
         canLockedAt = millis();
-        canLockedForCmd = &canCmd;
+        canLockedForCmd = canCmd;
         return true;
     }
     return false;
@@ -154,7 +159,7 @@ void prepareLockedCmd() {
         && cleanReadBuffer();
     }
     if(canLockedWrite) {
-        //loadWriteBuffer()
+        loadWriteBuffer();
         //&& canSendMfStart();
     }
 }
@@ -182,7 +187,6 @@ bool cleanReadBuffer() {
         error("Not locked for read.");
         return false;
     }
-    bReadBuffer.attr = NULL;
     bReadBuffer.totBytes = -1;
     bReadBuffer.rcvdBytes = 0;
     for (int i=0 ; i<MAX_RESULT_BUFF_LEN ; i++) {
@@ -199,23 +203,15 @@ bool loadWriteBuffer() {
         error("Not locked for write.");
         return false;
     }
-    bWriteBuffer.id = canLockedForCmd->id;
-    bWriteBuffer.attr = canLockedForCmd->attr;
-    //TODO
+    bWriteBuffer.sentBytes = 0;
+    for (int i=0 ; i<MAX_RESULT_FRAME_CNT ; i++) {
+        bWriteBuffer.sentFrames[i] = false;
+    }
+    canLockedForCmd->attr->fromJson(doc, bWriteBuffer.data);
+    bWriteBuffer.totBytes = canLockedForCmd->attr->dataSize();
+    debugWriteBuffer("Loaded data to write", canLockedForCmd, &bWriteBuffer);
+    return true;   
 }
-
-// void initWriteBuffer() {
-//     bWriteBuffer.id = -1;
-//     bWriteBuffer.attr = NULL;
-//     bWriteBuffer.totBytes = -1;
-//     bWriteBuffer.sentBytes = 0;
-//     for (int i=0 ; i<MAX_RESULT_FRAME_CNT ; i++) {
-//         bWriteBuffer.sentFrames[i] = false;
-//     }
-//     for (int i=0 ; i<MAX_RESULT_BUFF_LEN ; i++) {
-//         bWriteBuffer.data[i] = 0;
-//     }
-// }
 
 bool canReceiveMsg() {
     if(!canLockedRead) {
@@ -254,7 +250,7 @@ boolean isCtrlerToBsst() {
     );
 }
 
-bool decodedMf() {
+bool decodeMf() {
     if(!canLockedRead) {
         return false;
     }
@@ -268,28 +264,18 @@ bool decodedMfStart() {
     if(!canLockedRead) {
         return false;
     }
-    const CanAttr *attr;
-    bool found = false;
-    for(int i=0 ; i<CAN_SUPPORTED_COMMANDS_COUNT ; i++) {
-        attr = CAN_SUPPORTED_COMMANDS[i].attr;
-        if(
-            bMessage.op == CAN_MULTIFRAME_START &&
-            bMessage.cmd == attr->cmd &&
-            bMessage.subCmd == attr->subCmd
-        ) {
-            found = true;
-            break;
-        }
-    }
-    if(!found) {
+    if(
+        bMessage.op != CAN_MULTIFRAME_START ||
+        bMessage.cmd != canLockedForCmd->attr->cmd ||
+        bMessage.subCmd != canLockedForCmd->attr->subCmd
+    ) {
         return false;
     }
-    debugBMessage("MultiFrameStart", bMessage);
-    bReadBuffer.attr = attr;
-    bReadBuffer.totBytes = bMessage.data[0];
+    debugBMessage("MultiFrameStart received", &bMessage);
     if(!sendAck()) {
         return false;
     }
+    saveMfTotBytes();
     debug("Total bytes expected = %d", bMessage.data[0]);
     return true;
 }
@@ -298,18 +284,19 @@ bool decodedMfFrame() {
     if(!canLockedRead) {
         return false;
     }
-    if(
-        bMessage.op != CAN_MULTIFRAME &&
-        bMessage.op != CAN_MULTIFRAME_END
-    ) {
-      return false;
+    if(bMessage.op == CAN_MULTIFRAME) {
+        debugBMessage("MultiFrame received", &bMessage);
+    } else if (bMessage.op == CAN_MULTIFRAME_END) {
+        debugBMessage("MultiFrameEnd received", &bMessage);
+    } else {
+        return false;
     }
-    debugBMessage("MultiFrame", bMessage);
-    saveMfBytes();
     if(!sendAck()) {
         return false;
     }
-    debug("Total bytes saved/expected = %d/%d.", bReadBuffer.rcvdBytes, bReadBuffer.totBytes);
+    saveMfBytes();
+    debug("Total bytes saved/expected = %d/%d.",
+        bReadBuffer.rcvdBytes, bReadBuffer.totBytes);
     return true;
 }
 
@@ -318,7 +305,7 @@ bool sendAck() {
         return false;
     }
     twai_message_t tx = {};
-    tx.identifier = bafangCanAckId(*bReadBuffer.attr);
+    tx.identifier = canLockedForCmd->id;
     tx.extd = 1;
     tx.rtr = 0;
     tx.data_length_code = 0;
@@ -328,6 +315,10 @@ bool sendAck() {
         return false;
     }
     return true;
+}
+
+void saveMfTotBytes() {
+    bReadBuffer.totBytes = bMessage.data[0];
 }
 
 void saveMfBytes() {
@@ -343,51 +334,24 @@ void saveMfBytes() {
     bReadBuffer.rcvdBytes += bMessage.dlc;
 }
 
-bool completedMf() {
+bool completeMf() {
     return (canLockedRead &&
-        bReadBuffer.attr != NULL &&
         bReadBuffer.totBytes > 0 &&
         bReadBuffer.rcvdBytes == bReadBuffer.totBytes
     );
 }
 
 void returnBResult() {
-    debugBResult("Returning", bReadBuffer);
+    debugReadBuffer("Returning", canLockedForCmd, &bReadBuffer);
     doc.clear();
     doc["type"] = "result";
-    doc["field"] = bReadBuffer.attr->name;
-    doc["cmd"] = bReadBuffer.attr->cmd;
-    doc["subCmd"] = bReadBuffer.attr->subCmd;
-    decodeCanData();
+    doc["field"] = canLockedForCmd->attr->name;
+    doc["cmd"] = canLockedForCmd->attr->cmd;
+    doc["subCmd"] = canLockedForCmd->attr->subCmd;
+    canLockedForCmd->attr->toJson(doc, bReadBuffer.data);
     serializeJson(doc, Serial);
     Serial.println();
     canUnlock();
-}
-
-void decodeCanData() {
-    if(strcmp(bReadBuffer.attr->name, CAN_PARAM0.name) == 0) {
-        decodeCanParam0();
-    }
-}
-
-void decodeCanParam0() {
-    doc["data"]["speedLim"] = bReadBuffer.data[0];
-    for (int i = 0; i < 9; i++) {
-        doc["data"]["accel"][i] = bReadBuffer.data[1 + i];
-    }
-    for (int i = 0; i < 9; i++) {
-        int offset = 10 + i * 2;
-        doc["data"]["assist"][i] =
-            (uint16_t)bReadBuffer.data[offset] |
-            ((uint16_t)bReadBuffer.data[offset + 1] << 8);
-    }
-    doc["data"]["assistUpLim"] =
-        (uint16_t)bReadBuffer.data[28] |
-        ((uint16_t)bReadBuffer.data[29] << 8);
-    for (int i = 30; i <= 62; i++) {
-        doc["data"]["unknown"][i-30] = bReadBuffer.data[i];
-    }
-    doc["data"]["checksum"] = bReadBuffer.data[63];
 }
 
 bool canLockedForTooLong() {

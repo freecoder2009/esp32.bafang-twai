@@ -1,6 +1,5 @@
 #pragma once
 
-#include "types.h"
 #include "prototypes.h"
 
 // CAN system component codes
@@ -20,17 +19,6 @@ const int CAN_MULTIFRAME_START = 0x04;
 const int CAN_MULTIFRAME = 0x05;
 const int CAN_MULTIFRAME_END = 0x06;
 const int CAN_MULTIFRAME_WARNING = 0x07;
-
-const CanAttr CAN_PARAM0 { .name="param0", .cmd=0x60, .subCmd=0x10 };
-const CanAttr CAN_PARAM1 { .name="param1", .cmd=0x60, .subCmd=0x11 };
-
-const CanCommand CAN_PARAM0_READ { .attr=&CAN_PARAM0, .action="read", .id=bafangCanReadId(CAN_PARAM0) };
-const CanCommand CAN_PARAM0_WRITE { .attr=&CAN_PARAM0, .action="write", .id=bafangCanWriteId(CAN_PARAM0) };
-
-const CanCommand CAN_SUPPORTED_COMMANDS[] = {
-    CAN_PARAM0_READ
-};
-const int CAN_SUPPORTED_COMMANDS_COUNT = sizeof(CAN_SUPPORTED_COMMANDS) / sizeof(CAN_SUPPORTED_COMMANDS[0]);
 
 uint32_t bafangCanReadId(const CanAttr &canAttr) {
     return bafangCanId(

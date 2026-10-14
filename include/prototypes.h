@@ -1,18 +1,22 @@
 #pragma once
 
-#include "types.h"
+#include <Arduino.h>
+#include <ArduinoJson.h>
+#include "driver/twai.h"
 
 struct CanCommand;
 struct CanAttr;
-struct BafangMessage;
-struct BafangReadBuffer;
-struct BafangWriteBuffer;
+struct CanMessage;
+struct CanReadBuffer;
+struct CanWriteBuffer;
+
+struct Param0;
 
 bool readSerialLine();
 bool requireCanUnlocked();
 bool parseSerialLine();
 bool lockForSupportedCmd();
-bool canLockByCmd(CanCommand canCmd);
+bool canLockByCmd(const CanCommand *canCmd);
 bool canSendReadReq();
 bool cleanReadBuffer();
 bool loadWriteBuffer();
@@ -20,15 +24,14 @@ void prepareLockedCmd();
 bool canReceiveMsg();
 void decodeToBMessage(const twai_message_t &msg);
 boolean isCtrlerToBsst();
-bool decodedMf();
+bool decodeMf();
 bool decodedMfStart();
 bool decodedMfFrame();
 bool sendAck();
+void saveMfTotBytes();
 void saveMfBytes();
-bool completedMf();
+bool completeMf();
 void returnBResult();
-void decodeCanData();
-void decodeCanParam0();
 bool canLockedForTooLong();
 void canUnlock();
 void errorUnlock(const char* format, ...);
