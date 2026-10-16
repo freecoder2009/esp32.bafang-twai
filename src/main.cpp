@@ -187,11 +187,7 @@ bool requireReadRequest() {
     if(readRequestSent) {
         return true;
     }
-    twai_message_t canMsg = {};
-    twaiMsg(&canMsg, canLockedForCmd->id);
-    esp_err_t res = twai_transmit(&canMsg, pdMS_TO_TICKS(1000));
-    if (res != ESP_OK) {
-        errorUnlock("Failed sending CAN request for %s: %d", canLockedForCmd->attr->name, res);
+    if(!canSendMsg(canLockedForCmd->id)) {
         return false;
     }
     readRequestSent = true;
@@ -252,6 +248,24 @@ void decodeToBMessage(const twai_message_t &msg) {
     for (uint8_t i = 0; i < bMessage.dlc && i < 8; i++) {
         bMessage.data[i] = msg.data[i];
     }
+}
+
+bool canSendMsg(
+    uint32_t id,
+    uint8_t dlc,
+    uint8_t data[]
+) {
+    if(!canLockedRead && !canLockedWrite) {
+        return false;
+    }
+    twai_message_t canMsg = {};
+    buildCanMsg(&canMsg, id, dlc, data);
+    esp_err_t res = twai_transmit(&canMsg, pdMS_TO_TICKS(1000));
+    if (res != ESP_OK) {
+        errorUnlock("Failed sending to CAN id=0x%X: %d", id, res);
+        return false;
+    }
+    return true;
 }
 
 boolean isCtrlerToBsst() {
@@ -315,11 +329,7 @@ bool sendAck() {
     if(!canLockedRead) {
         return false;
     }
-    twai_message_t canMsg = {};
-    twaiMsg(&canMsg, canLockedForCmd->ackId);
-    esp_err_t res = twai_transmit(&canMsg, pdMS_TO_TICKS(1000));
-    if (res != ESP_OK) {
-        errorUnlock("Failed sending ACK to CAN: %d", res);
+    if(!canSendMsg(canLockedForCmd->ackId)) {
         return false;
     }
     return true;
@@ -365,6 +375,8 @@ bool requireStartMf() {
     if(!canLockedWrite) {
         return false;
     }
+    
+    //debug("param0 write id=%X", CAN_PARAM0_WRITE.id);
 
     // TODO
     return true;
@@ -391,7 +403,7 @@ bool isCompleteOrWriteMf() {
     return false;
 }
 
-void twaiMsg(
+void buildCanMsg(
     twai_message_t *canMsg,
     uint32_t id,
     uint8_t dlc,
