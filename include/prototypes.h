@@ -18,6 +18,12 @@ bool parseSerialLine();
 bool lockForSupportedCmd();
 bool canLockByCmd(const CanCommand *canCmd);
 bool requireReadRequest();
+void twaiMsg(
+    twai_message_t *canMsg,
+    uint32_t id,
+    uint8_t dlc=0,
+    uint8_t data[]=nullptr
+);
 void cleanReadBuffer();
 bool loadWriteBuffer();
 void prepareBuffer();

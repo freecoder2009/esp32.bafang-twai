@@ -70,7 +70,6 @@ void loop() {
     ) {
         returnBResult();
     }
-    /*
     if(canLockedWrite
         && requireStartMf()
         && canReceiveAck()
@@ -78,7 +77,6 @@ void loop() {
     ) {
         canUnlock();
     }
-    */
     if(canLockedForTooLong()) {
         errorUnlock("Timeout while locked; aborting, unlocking.");
     }
@@ -178,12 +176,12 @@ bool requireReadRequest() {
     if(readRequestSent) {
         return true;
     }
-    twai_message_t tx = {};
-    tx.identifier = canLockedForCmd->id;
-    tx.extd = 1;
-    tx.rtr = 0;
-    tx.data_length_code = 0;
-    esp_err_t res = twai_transmit(&tx, pdMS_TO_TICKS(1000));
+    debug("puiu 111");
+    twai_message_t canMsg = {};
+    twaiMsg(&canMsg, canLockedForCmd->id);
+    debug("puiu 222");
+    esp_err_t res = twai_transmit(&canMsg, pdMS_TO_TICKS(1000));
+    debug("puiu 333");
     if (res != ESP_OK) {
         errorUnlock("Failed sending CAN request for %s: %d", canLockedForCmd->attr->name, res);
         return false;
@@ -309,12 +307,9 @@ bool sendAck() {
     if(!canLockedRead) {
         return false;
     }
-    twai_message_t tx = {};
-    tx.identifier = canLockedForCmd->ackId;
-    tx.extd = 1;
-    tx.rtr = 0;
-    tx.data_length_code = 0;
-    esp_err_t res = twai_transmit(&tx, pdMS_TO_TICKS(1000));
+    twai_message_t canMsg = {};
+    twaiMsg(&canMsg, canLockedForCmd->ackId);
+    esp_err_t res = twai_transmit(&canMsg, pdMS_TO_TICKS(1000));
     if (res != ESP_OK) {
         errorUnlock("Failed sending ACK to CAN: %d", res);
         return false;
@@ -360,23 +355,50 @@ void returnBResult() {
 }
 
 bool requireStartMf() {
+    if(!canLockedWrite) {
+        return false;
+    }
+
     // TODO
     return true;
 }
 
 bool canReceiveAck() {
+    if(!canLockedWrite) {
+        return false;
+    }
     // TODO
     // if it's a const int CAN_ERROR_ACK = 0x03; then stop, error and unlock
     return true;
 }
 
 bool isCompleteOrWriteMf() {
+    if(!canLockedWrite) {
+        return false;
+    }
     // TODO
     // return true if write is complete (all frames/bytes have been written)
     //    in this case all frames should have been also acknowledged already
     // otherwise write next frame and return false
     // in case of error do error and unlock
     return false;
+}
+
+void twaiMsg(
+    twai_message_t *canMsg,
+    uint32_t id,
+    uint8_t dlc,
+    uint8_t data[]
+) { 
+    canMsg->identifier = id;
+    canMsg->extd = 1;
+    canMsg->rtr = 0;
+    canMsg->data_length_code = dlc;
+    if(dlc > 0) {
+        for (int i=0 ; i<dlc ; i++) {
+            canMsg->data[i] = data[i];
+        }
+    }
 }
 
 bool canLockedForTooLong() {
