@@ -12,6 +12,8 @@ struct CanWriteBuffer;
 
 struct Param0;
 
+void setupSerial();
+void setupTwai();
 bool readSerialLine();
 bool requireCanUnlocked();
 bool parseSerialLine();

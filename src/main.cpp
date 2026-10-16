@@ -7,10 +7,12 @@
 #include "codecs.h"
 #include "logging.h"
 
+const int LOG_LEVEL = LOG_DEBUG;
+
 #define TX_PIN GPIO_NUM_5
 #define RX_PIN GPIO_NUM_4
 
-const int LOG_LEVEL = LOG_DEBUG;
+const unsigned long SERIAL_BAUD = 1000000;
 
 const int MAX_SERIAL_BUFF_LEN = 512;
 const unsigned long MAX_CAN_LOCK_MILLIS = 2000;
@@ -35,23 +37,8 @@ const int CAN_SUPPORTED_COMMANDS_COUNT =
     / sizeof(CAN_SUPPORTED_COMMANDS[0]);
 
 void setup() {
-    Serial.begin(1000000);
-    while (!Serial);
-    Serial.println();
-    twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(TX_PIN, RX_PIN, TWAI_MODE_NORMAL);
-    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_250KBITS(); // Bafang uses 250kbps
-    twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
-    if (twai_driver_install(&g_config, &t_config, &f_config) == ESP_OK) {
-        info("TWAI (CAN) Driver Installed Successfully.");
-    } else {
-        error("Failed to install driver.");
-        return;
-    }
-    if (twai_start() == ESP_OK) {
-        info("TWAI (CAN) Driver Started.");
-    } else {
-        error("Failed to start driver.");
-    }
+    setupSerial();
+    setupTwai();
 }
 
 void loop() {
@@ -69,6 +56,7 @@ void loop() {
         && isCompleteMfRead()
     ) {
         returnBResult();
+        canUnlock();
     }
     if(canLockedWrite
         && requireStartMf()
@@ -79,6 +67,29 @@ void loop() {
     }
     if(canLockedForTooLong()) {
         errorUnlock("Timeout while locked; aborting, unlocking.");
+    }
+}
+
+void setupSerial() {
+    Serial.begin(SERIAL_BAUD);
+    while (!Serial);
+    Serial.println();
+}
+
+void setupTwai() {
+    twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(TX_PIN, RX_PIN, TWAI_MODE_NORMAL);
+    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_250KBITS(); // Bafang uses 250kbps
+    twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
+    if (twai_driver_install(&g_config, &t_config, &f_config) == ESP_OK) {
+        info("TWAI (CAN) Driver Installed Successfully.");
+    } else {
+        error("Failed to install driver.");
+        return;
+    }
+    if (twai_start() == ESP_OK) {
+        info("TWAI (CAN) Driver Started.");
+    } else {
+        error("Failed to start driver.");
     }
 }
 
@@ -176,12 +187,9 @@ bool requireReadRequest() {
     if(readRequestSent) {
         return true;
     }
-    debug("puiu 111");
     twai_message_t canMsg = {};
     twaiMsg(&canMsg, canLockedForCmd->id);
-    debug("puiu 222");
     esp_err_t res = twai_transmit(&canMsg, pdMS_TO_TICKS(1000));
-    debug("puiu 333");
     if (res != ESP_OK) {
         errorUnlock("Failed sending CAN request for %s: %d", canLockedForCmd->attr->name, res);
         return false;
@@ -351,7 +359,6 @@ void returnBResult() {
     canLockedForCmd->attr->toJson(doc, bReadBuffer.data);
     serializeJson(doc, Serial);
     Serial.println();
-    canUnlock();
 }
 
 bool requireStartMf() {
