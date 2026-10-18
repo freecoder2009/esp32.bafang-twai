@@ -1,0 +1,45 @@
+{"type":"req","field":"param0","action":"write","data":{"speedLim":50,"accel":[1,2,2,3,3,3,4,4,5],"assist":[30,60,100,140,170,200,240,290,340],"assistUpLim":500,"unknown":[50,20,0,0,0,0,0,0,0,0,0,4,15,15,15,15,15,10,10,8,6,244,1,1,5,244,1,96,9,96,9,96,9]}}
+{"type":"log","time":60273,"level":1,"message":"Locked for request: {\"type\":\"req\",\"field\":\"param0\",\"action\":\"write\",\"data\":{\"speedLim\":50,\"accel\":[1,2,2,3,3,3,4,4,5],\"assist\":[30,60,100,140,170,200,240,290,340],\"assistUpLim\":500,\"unknown\":[50,20,0,0,0,0,0,0,0,0,0,4,15,15,15,15,15,10,10,8,6,244,1,1,5,244,1,96,9,96,9,96,9]}}."}
+
+{"type":"log","time":60280,"level":1,"message":"Loaded data to write: FIELD=param0 CMD=60 SUB=10 BYTES:64 DATA=32 01 02 02 03 03 03 04 04 05 1E 00 3C 00 64 00 8C 00 AA 00 C8 00 F0 00 22 01 54 01 F4 01 32 14 00 00 00 00 00 00 00 00 00 04 0F 0F 0F 0F 0F 0A 0A 08 06 F4 01 01 05 F4 01 60 09 60 09 60 09 00 "}
+
+{"type":"log","time":60286,"level":1,"message":"Sending write-init message, canId=0x85106010, byteCnt=64."}
+
+{"type":"log","time":60289,"level":1,"message":"Received CAN message: ID=022A6010 SRC=02 DST=05 DLC=0 OP=02 CMD=60 SUB=10 DATA="}
+
+{"type":"log","time":60343,"level":1,"message":"Payload #1, Frame idx=-1(N/A), canId=0x85146010, tot/sent/rem/dlc 64/0/64/8, sending now: 32 01 02 02 03 03 03 04 "}
+
+{"type":"log","time":60348,"level":1,"message":"Received CAN message: ID=022A6010 SRC=02 DST=05 DLC=0 OP=02 CMD=60 SUB=10 DATA="}
+
+{"type":"log","time":60393,"level":1,"message":"Payload #2, Frame idx=0, canId=0x85150000, tot/sent/rem/dlc 64/8/56/8, sending now: 04 05 1E 00 3C 00 64 00 "}
+
+{"type":"log","time":60397,"level":1,"message":"Received CAN message: ID=022A6010 SRC=02 DST=05 DLC=0 OP=02 CMD=60 SUB=10 DATA="}
+
+{"type":"log","time":60446,"level":1,"message":"Payload #3, Frame idx=1, canId=0x85150001, tot/sent/rem/dlc 64/16/48/8, sending now: 8C 00 AA 00 C8 00 F0 00 "}
+
+{"type":"log","time":60450,"level":1,"message":"Received CAN message: ID=022A6010 SRC=02 DST=05 DLC=0 OP=02 CMD=60 SUB=10 DATA="}
+
+{"type":"log","time":60496,"level":1,"message":"Payload #4, Frame idx=2, canId=0x85150002, tot/sent/rem/dlc 64/24/40/8, sending now: 22 01 54 01 F4 01 32 14 "}
+
+{"type":"log","time":60500,"level":1,"message":"Received CAN message: ID=022A6010 SRC=02 DST=05 DLC=0 OP=02 CMD=60 SUB=10 DATA="}
+
+{"type":"log","time":60548,"level":1,"message":"Payload #5, Frame idx=3, canId=0x85150003, tot/sent/rem/dlc 64/32/32/8, sending now: 00 00 00 00 00 00 00 00 "}
+
+{"type":"log","time":60552,"level":1,"message":"Received CAN message: ID=022A6010 SRC=02 DST=05 DLC=0 OP=02 CMD=60 SUB=10 DATA="}
+
+{"type":"log","time":60598,"level":1,"message":"Payload #6, Frame idx=4, canId=0x85150004, tot/sent/rem/dlc 64/40/24/8, sending now: 00 04 0F 0F 0F 0F 0F 0A "}
+
+{"type":"log","time":60602,"level":1,"message":"Received CAN message: ID=022A6010 SRC=02 DST=05 DLC=0 OP=02 CMD=60 SUB=10 DATA="}
+
+{"type":"log","time":60650,"level":1,"message":"Payload #7, Frame idx=5, canId=0x85150005, tot/sent/rem/dlc 64/48/16/8, sending now: 0A 08 06 F4 01 01 05 F4 "}
+
+{"type":"log","time":60654,"level":1,"message":"Received CAN message: ID=022A6010 SRC=02 DST=05 DLC=0 OP=02 CMD=60 SUB=10 DATA="}
+
+{"type":"log","time":60700,"level":1,"message":"Payload #8, Frame idx=6, canId=0x85160006, tot/sent/rem/dlc 64/56/8/8, sending now: 01 60 09 60 09 60 09 00 "}
+
+{"type":"log","time":60704,"level":1,"message":"Received CAN message: ID=022A6010 SRC=02 DST=05 DLC=0 OP=02 CMD=60 SUB=10 DATA="}
+
+{"type":"log","time":60769,"level":1,"message":"Write complete for param0"}
+
+{"type":"log","time":60770,"level":1,"message":"System unlocked."}
+

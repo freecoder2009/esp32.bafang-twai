@@ -387,7 +387,7 @@ bool requireWriteInit() {
 
     debug("Sending write-init message, canId=0x%X, byteCnt=%d.", canId, byteCnt);
 
-    //canSendMsg(canId, 1, bytes);
+    canSendMsg(canId, 1, bytes);
 
     writeRequestSent = true;
     return true;
@@ -397,15 +397,19 @@ bool canRcvWriteAckOrDoDelay() {
     if(!canLockedWrite) {
         return false;
     }
-    //bMessageIsAckErrWarn();
-    // if(canReceiveMsg()) {
-    //     debugBMessage("Received CAN message", &bMessage);
-    //     if(bMessageIsAckErrWarn()) {
-    //         errorUnlock("Received CAN Err/Warn ack; aborting, unlocking.");
-    //         return false;
-    //     }
-    // }
+    if(canReceiveMsg()) {
+        debugBMessage("Received CAN message", &bMessage);
+        if(bMessageIsAckErrWarn()) {
+            errorUnlock("Received CAN Err/Warn ack; aborting, unlocking.");
+            return false;
+        }
+    }
     return isDelayPassed();
+}
+
+bool bMessageIsAckErrWarn() {
+    return (bMessage.op == CAN_OP_ERROR_ACK
+        || bMessage.op == CAN_OP_MULTIFRAME_WARNING);
 }
 
 bool isDelayPassed() {
@@ -427,13 +431,6 @@ bool isCompleteWriteOrCanWriteMf() {
     }
     bool isStartFrame = (bWriteBuffer.sentBytes == 0);
 
-
-    // if(!isStartFrame) {
-    //     //debug("Not writing more frames %s", canLockedForCmd->attr->name);
-    //     return false;
-    // }
-
-
     int remaining = bWriteBuffer.totBytes - bWriteBuffer.sentBytes;
     int dlc = (remaining < MAX_BYTES_PER_FRAME
         ? remaining
@@ -445,9 +442,6 @@ bool isCompleteWriteOrCanWriteMf() {
         : bafangCan_getWriteFrameId(frameIdx, (remaining == dlc)));
 
 
-    //canSendMsg(canId, dlc, bWriteBuffer.data);
-    
-
     // debug
     char data[dlc*3 + 10];
     for (int i=0; i<dlc; i++) {
@@ -457,6 +451,9 @@ bool isCompleteWriteOrCanWriteMf() {
         payloadCnt, (isStartFrame ? -1 : frameIdx), (isStartFrame ? "(N/A)" : ""), 
         canId, bWriteBuffer.totBytes, bWriteBuffer.sentBytes, remaining, dlc, data);
     // end debug
+
+    
+    canSendMsg(canId, dlc, bWriteBuffer.data);
 
     bWriteBuffer.sentBytes += dlc;
     bWriteBuffer.sentFrames++;

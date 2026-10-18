@@ -47,6 +47,7 @@ bool isCompleteMfRead();
 void returnBResult();
 bool requireWriteInit();
 bool canRcvWriteAckOrDoDelay();
+bool bMessageIsAckErrWarn();
 bool isDelayPassed();
 bool isCompleteWriteOrCanWriteMf();
 bool canLockedForTooLong();

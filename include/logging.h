@@ -81,6 +81,7 @@ void debugBMessage(const char* text, const CanMessage *bMessage) {
       return;
     }
     char data[bMessage->dlc*3 + 10];
+    data[0] = NULL;
     for (int i=0; i<bMessage->dlc; i++) {
         sprintf(data+3*i, "%02X ", bMessage->data[i]);
     }
@@ -95,6 +96,7 @@ void debugReadBuffer(const char* text, const CanCommand *canLockedForCmd, const 
         return;
     }
     char data[bReadBuffer->totBytes*3 + 10];
+    data[0] = NULL;
     for (int i=0; i<bReadBuffer->totBytes; i++) {
         sprintf(data+3*i, "%02X ", bReadBuffer->data[i]);
     }
