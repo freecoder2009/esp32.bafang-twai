@@ -3,57 +3,74 @@
 #include "prototypes.h"
 
 // CAN system component codes
-const int CAN_TORQUE_SENSOR = 0x01;
-const int CAN_DRIVE_UNIT = 0x02;
-const int CAN_DISPLAY = 0x03;
-const int CAN_BATTERY = 0x04;
-const int CAN_BESST = 0x05;
-const int CAN_BROADCAST = 0x1F;
+const int CAN_DEV_TORQUE_SENSOR = 0x01;
+const int CAN_DEV_DRIVE_UNIT = 0x02;
+const int CAN_DEV_DISPLAY = 0x03;
+const int CAN_DEV_BATTERY = 0x04;
+const int CAN_DEV_BESST = 0x05;
+const int CAN_DV_BROADCAST = 0x1F;
 
-// CAN command codes
-const int CAN_WRITE_CMD = 0x00;
-const int CAN_READ_CMD = 0x01;
-const int CAN_NORMAL_ACK = 0x02;
-const int CAN_ERROR_ACK = 0x03;
-const int CAN_MULTIFRAME_START = 0x04;
-const int CAN_MULTIFRAME = 0x05;
-const int CAN_MULTIFRAME_END = 0x06;
-const int CAN_MULTIFRAME_WARNING = 0x07;
+// CAN operation codes
+const int CAN_OP_WRITE = 0x00;
+const int CAN_OP_READ = 0x01;
+const int CAN_OP_NORMAL_ACK = 0x02;
+const int CAN_OP_ERROR_ACK = 0x03;
+const int CAN_OP_MULTIFRAME_START = 0x04;
+const int CAN_OP_MULTIFRAME = 0x05;
+const int CAN_OP_MULTIFRAME_END = 0x06;
+const int CAN_OP_MULTIFRAME_WARNING = 0x07;
 
-uint32_t bafangCanReadId(const CanAttr &canAttr) {
+uint32_t bafangCan_getReadId(const CanAttr &canAttr) {
     return bafangCanId(
-        CAN_BESST, 
-        CAN_DRIVE_UNIT, 
-        CAN_READ_CMD, 
+        CAN_DEV_BESST, 
+        CAN_DEV_DRIVE_UNIT, 
+        CAN_OP_READ, 
         canAttr.cmd, 
         canAttr.subCmd
     );
 }
-uint32_t bafangCanWriteId(const CanAttr &canAttr) {
+uint32_t bafangCan_getReadAckId(const CanAttr &canAttr) {
     return bafangCanId(
-        CAN_BESST, 
-        CAN_DRIVE_UNIT, 
-        CAN_WRITE_CMD, 
+        CAN_DEV_BESST, 
+        CAN_DEV_DRIVE_UNIT, 
+        CAN_OP_NORMAL_ACK, 
         canAttr.cmd, 
         canAttr.subCmd
     );
 }
-uint32_t bafangCanReadAckId(const CanAttr &canAttr) {
+uint32_t bafangCan_getWriteStartId(const CanAttr &canAttr) {
     return bafangCanId(
-        CAN_BESST, 
-        CAN_DRIVE_UNIT, 
-        CAN_NORMAL_ACK, 
+        CAN_DEV_BESST,
+        CAN_DEV_DRIVE_UNIT,
+        CAN_OP_WRITE,
         canAttr.cmd, 
         canAttr.subCmd
     );
 }
-uint32_t bafangCanWriteAckId(const CanAttr &canAttr) {
+uint32_t bafangCan_getWriteAckId(const CanAttr &canAttr) {
     return bafangCanId(
-        CAN_DRIVE_UNIT,
-        CAN_BESST,
-        CAN_NORMAL_ACK, 
+        CAN_DEV_DRIVE_UNIT,
+        CAN_DEV_BESST,
+        CAN_OP_NORMAL_ACK, 
         canAttr.cmd, 
         canAttr.subCmd
+    );
+}
+uint32_t bafangCan_getWriteStartFrameId(const CanAttr &canAttr) {
+    return bafangCanId(
+        CAN_DEV_BESST,
+        CAN_DEV_DRIVE_UNIT,
+        CAN_OP_MULTIFRAME_START,
+        canAttr.cmd, 
+        canAttr.subCmd
+    );
+}
+uint32_t bafangCan_getWriteFrameId(int frameIdx, bool isLast) {
+    return bafangCanId(
+        CAN_DEV_BESST,
+        CAN_DEV_DRIVE_UNIT,
+        (isLast ? CAN_OP_MULTIFRAME_END : CAN_OP_MULTIFRAME),
+        0, frameIdx
     );
 }
 uint32_t bafangCanId(const int source, const int target, const int op, int cmd, int subCmd) {

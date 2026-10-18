@@ -19,15 +19,15 @@ bool requireCanUnlocked();
 bool parseSerialLine();
 bool lockForSupportedCmd();
 bool canLockByCmd(const CanCommand *canCmd);
-bool requireReadRequest();
+bool requireReadInit();
 bool canSendMsg(
-    uint32_t id,
+    uint32_t rwStartId,
     uint8_t dlc=0,
     uint8_t data[]=nullptr
 );
 void buildCanMsg(
     twai_message_t *canMsg,
-    uint32_t id,
+    uint32_t rwStartId,
     uint8_t dlc=0,
     uint8_t data[]=nullptr
 );
@@ -40,20 +40,23 @@ boolean isCtrlerToBsst();
 bool decodeMf();
 bool decodedMfStart();
 bool decodedMfFrame();
-bool sendAck();
+bool sendReadAck();
 void saveMfTotBytes();
 void saveMfBytes();
 bool isCompleteMfRead();
 void returnBResult();
-bool requireStartMf();
-bool canReceiveAck();
-bool isCompleteOrWriteMf();
+bool requireWriteInit();
+bool canRcvWriteAckOrDoDelay();
+bool isDelayPassed();
+bool isCompleteWriteOrCanWriteMf();
 bool canLockedForTooLong();
 void canUnlock();
 void errorUnlock(const char* format, ...);
 
-uint32_t bafangCanReadId(const CanAttr &canAttr);
-uint32_t bafangCanWriteId(const CanAttr &canAttr);
-uint32_t bafangCanReadAckId(const CanAttr &canAttr);
-uint32_t bafangCanWriteAckId(const CanAttr &canAttr);
+uint32_t bafangCan_getReadId(const CanAttr &canAttr);
+uint32_t bafangCan_getReadAckId(const CanAttr &canAttr);
+uint32_t bafangCan_getWriteStartId(const CanAttr &canAttr);
+uint32_t bafangCan_getWriteAckId(const CanAttr &canAttr);
+uint32_t bafangCan_getWriteStartFrameId(const CanAttr &canAttr);
+uint32_t bafangCan_getWriteFrameId(int frmIdx, bool isLast);
 uint32_t bafangCanId(const int source, const int target, const int op, int cmd, int subCmd);

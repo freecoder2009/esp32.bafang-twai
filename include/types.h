@@ -21,12 +21,13 @@ struct CanAttr {
 struct CanCommand {
   const CanAttr* attr;
   const char* action;
-  uint32_t id;
+  const int op;
+  uint32_t rwStartId;
   uint32_t ackId;
 };
 
 struct CanMessage {
-    uint32_t id;
+    uint32_t rwStartId;
     uint8_t source;
     uint8_t target;
     uint8_t op;
@@ -46,6 +47,6 @@ struct CanReadBuffer {
 struct CanWriteBuffer {
     int totBytes;
     int sentBytes;
-    bool sentFrames[MAX_RESULT_FRAME_CNT];
+    int sentFrames;
     uint8_t data[MAX_RESULT_BUFF_LEN];
 };

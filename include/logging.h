@@ -85,7 +85,7 @@ void debugBMessage(const char* text, const CanMessage *bMessage) {
         sprintf(data+3*i, "%02X ", bMessage->data[i]);
     }
     log(LOG_DEBUG, "%s: ID=%08lX SRC=%02X DST=%02X DLC=%d OP=%02X CMD=%02X SUB=%02X DATA=%s",
-        text, bMessage->id, bMessage->source, bMessage->target, bMessage->dlc,
+        text, bMessage->rwStartId, bMessage->source, bMessage->target, bMessage->dlc,
         bMessage->op, bMessage->cmd, bMessage->subCmd, data
     );
 }

@@ -54,7 +54,7 @@ struct Param0 : CanAttr {
             offset = i-30;
             data[i] = doc["data"]["unknown"][offset].as<uint8_t>();
         }
-        data[63] = checksum(data, 63);
+        data[63] = 0;//checksum(data, 63);
     }
 
     private:
@@ -70,15 +70,17 @@ struct Param0 : CanAttr {
 const Param0 CAN_PARAM0;
 
 const CanCommand CAN_PARAM0_READ  {
-    .attr=&CAN_PARAM0,
-    .action="read", 
-    .id=bafangCanReadId(CAN_PARAM0),
-    .ackId=bafangCanReadAckId(CAN_PARAM0)
+    .attr      = &CAN_PARAM0,
+    .action    = "read",
+    .op        = CAN_OP_READ,
+    .rwStartId = bafangCan_getReadId(CAN_PARAM0),
+    .ackId     = bafangCan_getReadAckId(CAN_PARAM0)
 };
 
 const CanCommand CAN_PARAM0_WRITE {
-    .attr=&CAN_PARAM0,
-    .action="write",
-    .id=bafangCanWriteId(CAN_PARAM0),
-    .ackId=bafangCanWriteAckId(CAN_PARAM0)
+    .attr      = &CAN_PARAM0,
+    .action    = "write",
+    .op        = CAN_OP_WRITE,
+    .rwStartId = bafangCan_getWriteStartId(CAN_PARAM0),
+    .ackId     = bafangCan_getWriteAckId(CAN_PARAM0)
 };
