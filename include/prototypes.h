@@ -21,13 +21,13 @@ bool lockForSupportedCmd();
 bool canLockByCmd(const CanCommand *canCmd);
 bool requireReadInit();
 bool canSendMsg(
-    uint32_t rwStartId,
+    uint32_t canId,
     uint8_t dlc=0,
     uint8_t data[]=nullptr
 );
 void buildCanMsg(
     twai_message_t *canMsg,
-    uint32_t rwStartId,
+    uint32_t canId,
     uint8_t dlc=0,
     uint8_t data[]=nullptr
 );

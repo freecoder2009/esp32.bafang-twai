@@ -73,7 +73,7 @@ const CanCommand CAN_PARAM0_READ  {
     .attr      = &CAN_PARAM0,
     .action    = "read",
     .op        = CAN_OP_READ,
-    .rwStartId = bafangCan_getReadId(CAN_PARAM0),
+    .canId = bafangCan_getReadId(CAN_PARAM0),
     .ackId     = bafangCan_getReadAckId(CAN_PARAM0)
 };
 
@@ -81,6 +81,6 @@ const CanCommand CAN_PARAM0_WRITE {
     .attr      = &CAN_PARAM0,
     .action    = "write",
     .op        = CAN_OP_WRITE,
-    .rwStartId = bafangCan_getWriteStartId(CAN_PARAM0),
+    .canId = bafangCan_getWriteStartId(CAN_PARAM0),
     .ackId     = bafangCan_getWriteAckId(CAN_PARAM0)
 };

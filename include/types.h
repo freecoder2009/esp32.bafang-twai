@@ -22,12 +22,12 @@ struct CanCommand {
   const CanAttr* attr;
   const char* action;
   const int op;
-  uint32_t rwStartId;
+  uint32_t canId;
   uint32_t ackId;
 };
 
 struct CanMessage {
-    uint32_t rwStartId;
+    uint32_t canId;
     uint8_t source;
     uint8_t target;
     uint8_t op;

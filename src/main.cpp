@@ -33,7 +33,7 @@ CanMessage bMessage{};
 JsonDocument doc;
 
 const CanCommand CAN_SUPPORTED_COMMANDS[] = {
-    CAN_PARAM0_READ, CAN_PARAM0_WRITE
+    CAN_SOFTWARE_READ, CAN_PARAM0_READ, CAN_PARAM0_WRITE
 };
 const int CAN_SUPPORTED_COMMANDS_COUNT = 
     sizeof(CAN_SUPPORTED_COMMANDS)
@@ -190,7 +190,7 @@ bool requireReadInit() {
     if(readRequestSent) {
         return true;
     }
-    if(!canSendMsg(canLockedForCmd->rwStartId)) {
+    if(!canSendMsg(canLockedForCmd->canId)) {
         return false;
     }
     readRequestSent = true;
@@ -235,11 +235,12 @@ bool canReceiveMsg() {
     if(!isCtrlerToBsst()) {
       return false;
     }
+    debugBMessage("Received CAN message", &bMessage);
     return true;
 }
 
 void decodeToBMessage(const twai_message_t &msg) {
-    bMessage.rwStartId = msg.identifier;
+    bMessage.canId = msg.identifier;
     bMessage.source = ((msg.identifier >> 24) & 0xFF) & 0x0F;
     bMessage.target = (msg.identifier >> 19) & 0x1F;
     bMessage.op     = (msg.identifier >> 16) & 0x07;
@@ -261,6 +262,7 @@ bool canSendMsg(
     }
     twai_message_t canMsg = {};
     buildCanMsg(&canMsg, canId, dlc, data);
+    debugCanMsg("Sending CAN message", &canMsg);
     esp_err_t res = twai_transmit(&canMsg, pdMS_TO_TICKS(1000));
     if (res != ESP_OK) {
         errorUnlock("Failed sending to CAN canId=0x%X: %d", canId, res);
@@ -297,7 +299,7 @@ bool decodedMfStart() {
     ) {
         return false;
     }
-    debugBMessage("MultiFrameStart received", &bMessage);
+    debug("Message is MultiFrameStart");
     if(!sendReadAck()) {
         return false;
     }
@@ -311,9 +313,9 @@ bool decodedMfFrame() {
         return false;
     }
     if(bMessage.op == CAN_OP_MULTIFRAME) {
-        debugBMessage("MultiFrame received", &bMessage);
+        debug("Message is MultiFrame.");
     } else if (bMessage.op == CAN_OP_MULTIFRAME_END) {
-        debugBMessage("MultiFrameEnd received", &bMessage);
+        debug("Message is MultiFrameEnd.");
     } else {
         return false;
     }
@@ -398,7 +400,6 @@ bool canReceiveAck() {
     if(!canReceiveMsg()) {
         return false;
     }
-    debugBMessage("Received CAN message", &bMessage);
     if(isAckErrWarn()) {
         errorUnlock("Error/Warning ack, unlocking.");
         return false;
@@ -439,18 +440,19 @@ bool isCompleteWriteOrCanWriteMf() {
     uint32_t canId = (isStartFrame
         ? bafangCan_getWriteStartFrameId(*canLockedForCmd->attr)
         : bafangCan_getWriteFrameId(frameIdx, (remaining == dlc)));
+    uint8_t *bOffset = bWriteBuffer.data + bWriteBuffer.sentBytes;
 
     // debug
     char data[dlc*3 + 10];
     for (int i=0; i<dlc; i++) {
-        sprintf(data+3*i, "%02X ", bWriteBuffer.data[bWriteBuffer.sentBytes + i]);
+        sprintf(data+3*i, "%02X ", bOffset[i]);
     }
     debug("Payload #%d, Frame idx=%d%s, canId=0x%X, tot/sent/rem/dlc %d/%d/%d/%d, sending now: %s",
         payloadCnt, (isStartFrame ? -1 : frameIdx), (isStartFrame ? "(N/A)" : ""), 
         canId, bWriteBuffer.totBytes, bWriteBuffer.sentBytes, remaining, dlc, data);
     // end debug
     
-    canSendMsg(canId, dlc, bWriteBuffer.data);
+    canSendMsg(canId, dlc, bOffset);
 
     bWriteBuffer.sentBytes += dlc;
     bWriteBuffer.sentFrames++;
@@ -460,11 +462,11 @@ bool isCompleteWriteOrCanWriteMf() {
 
 void buildCanMsg(
     twai_message_t *canMsg,
-    uint32_t rwStartId,
+    uint32_t canId,
     uint8_t dlc,
     uint8_t data[]
 ) { 
-    canMsg->identifier = rwStartId;
+    canMsg->identifier = canId;
     canMsg->extd = 1;
     canMsg->rtr = 0;
     canMsg->data_length_code = dlc;

@@ -76,6 +76,32 @@ void error(const char* format, ...) {
     va_end(args);
 }
 
+void debugCanMsg(const char* text, const twai_message_t *canMsg) {
+    if(LOG_LEVEL > LOG_DEBUG) {
+      return;
+    }
+
+    Serial.print(text);
+    Serial.print(": ");
+
+    int totBytes = canMsg->data_length_code;
+    int buffSize = totBytes*3 + 1;
+    char buff[buffSize];
+    for (int i=0; i<totBytes; i++) {
+        sprintf(buff+3*i, "%02X ", canMsg->data[i]);
+
+        Serial.printf("%02X ", canMsg->data[i]);
+        
+    }
+    buff[buffSize-1] = '\0';
+
+    Serial.println();
+
+    log(LOG_DEBUG, "%s: ID=%08lX DLC=%d DATA=%s",
+        text, canMsg->identifier, canMsg->data_length_code, buff
+    );
+}
+
 void debugBMessage(const char* text, const CanMessage *bMessage) {
     if(LOG_LEVEL > LOG_DEBUG) {
       return;
@@ -83,12 +109,12 @@ void debugBMessage(const char* text, const CanMessage *bMessage) {
     int totBytes = bMessage->dlc;
     int buffSize = totBytes*3 + 1;
     char buff[buffSize];
-    for (int i=0; i<bMessage->dlc; i++) {
+    for (int i=0; i<totBytes; i++) {
         sprintf(buff+3*i, "%02X ", bMessage->data[i]);
     }
     buff[buffSize-1] = '\0';
     log(LOG_DEBUG, "%s: ID=%08lX SRC=%02X DST=%02X DLC=%d OP=%02X CMD=%02X SUB=%02X DATA=%s",
-        text, bMessage->rwStartId, bMessage->source, bMessage->target, bMessage->dlc,
+        text, bMessage->canId, bMessage->source, bMessage->target, bMessage->dlc,
         bMessage->op, bMessage->cmd, bMessage->subCmd, buff
     );
 }
