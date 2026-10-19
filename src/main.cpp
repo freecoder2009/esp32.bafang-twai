@@ -22,7 +22,7 @@ const int DELAY_FRAME_WRITE_MS = 50;
 char serialBuff[MAX_SERIAL_BUFF_LEN];
 bool canLockedRead = false;
 bool canLockedWrite = false;
-bool readRequestSent = false;
+bool readInitSent = false;
 bool writeRequestSent = false;
 const CanCommand *canLockedForCmd = nullptr;
 unsigned long canLockedAt = 0;
@@ -187,13 +187,15 @@ bool requireReadInit() {
         error("Not locked for read.");
         return false;
     }
-    if(readRequestSent) {
+    if(readInitSent) {
         return true;
     }
-    if(!canSendMsg(canLockedForCmd->canId)) {
+    uint32_t canId = canLockedForCmd->canId;
+    debug("Sending Read-Init message (canId=0x%X).", canId);
+    if(!canSendMsg(canId)) {
         return false;
     }
-    readRequestSent = true;
+    readInitSent = true;
     return true;
 }
 
@@ -235,7 +237,7 @@ bool canReceiveMsg() {
     if(!isCtrlerToBsst()) {
       return false;
     }
-    debugBMessage("Received CAN message", &bMessage);
+    logBMessage(LOG_TRACE, "Received CAN message", &bMessage);
     return true;
 }
 
@@ -262,10 +264,10 @@ bool canSendMsg(
     }
     twai_message_t canMsg = {};
     buildCanMsg(&canMsg, canId, dlc, data);
-    debugCanMsg("Sending CAN message", &canMsg);
+    traceCanMsg("Sending CAN message", &canMsg);
     esp_err_t res = twai_transmit(&canMsg, pdMS_TO_TICKS(1000));
     if (res != ESP_OK) {
-        errorUnlock("Failed sending to CAN canId=0x%X: %d", canId, res);
+        errorUnlock("Failed sending CAN message (canId=0x%X): %d", canId, res);
         return false;
     }
     return true;
@@ -299,7 +301,7 @@ bool decodedMfStart() {
     ) {
         return false;
     }
-    debug("Message is MultiFrameStart");
+    logBMessage(LOG_DEBUG, "Received MultiFrameStart", &bMessage);
     if(!sendReadAck()) {
         return false;
     }
@@ -313,9 +315,9 @@ bool decodedMfFrame() {
         return false;
     }
     if(bMessage.op == CAN_OP_MULTIFRAME) {
-        debug("Message is MultiFrame.");
+        logBMessage(LOG_DEBUG, "Received MultiFrame", &bMessage);
     } else if (bMessage.op == CAN_OP_MULTIFRAME_END) {
-        debug("Message is MultiFrameEnd.");
+        logBMessage(LOG_DEBUG, "Received MultiFrameEnd", &bMessage);
     } else {
         return false;
     }
@@ -332,7 +334,9 @@ bool sendReadAck() {
     if(!canLockedRead) {
         return false;
     }
-    if(!canSendMsg(canLockedForCmd->ackId)) {
+    uint32_t canId = canLockedForCmd->ackId;
+    trace("Sending Read-Ack message (canId=0x%X).", canId);
+    if(!canSendMsg(canId)) {
         return false;
     }
     return true;
@@ -384,11 +388,10 @@ bool requireWriteInit() {
     uint32_t canId = bafangCan_getWriteStartId(*canLockedForCmd->attr);
     uint8_t byteCnt = canLockedForCmd->attr->dataSize();
     uint8_t bytes[] = { byteCnt };
-
-    debug("Sending write-init message, canId=0x%X, byteCnt=%d.", canId, byteCnt);
-
-    canSendMsg(canId, 1, bytes);
-
+    debug("Sending Write-Init message (canId=0x%X, byteCnt=%d).", canId, byteCnt);
+    if(!canSendMsg(canId, 1, bytes)) {
+        return false;
+    }
     writeRequestSent = true;
     return true;
 }
@@ -426,38 +429,46 @@ bool isCompleteWriteOrCanWriteMf() {
         return false;
     }
     if(bWriteBuffer.sentBytes == bWriteBuffer.totBytes) {
-        debug("Write complete for %s", canLockedForCmd->attr->name);
+        debug("Write complete for %s; bytes tot/sent %d/%d.", 
+            canLockedForCmd->attr->name, bWriteBuffer.totBytes, bWriteBuffer.sentBytes);
         return true;
     }
-    bool isStartFrame = (bWriteBuffer.sentBytes == 0);
+    canWriteNextMf();
+    return false;
+}
 
+bool canWriteNextMf() {
     int remaining = bWriteBuffer.totBytes - bWriteBuffer.sentBytes;
     int dlc = (remaining < MAX_BYTES_PER_FRAME
         ? remaining
         : MAX_BYTES_PER_FRAME);
     int payloadCnt = bWriteBuffer.sentFrames + 1;
     int frameIdx = bWriteBuffer.sentFrames - 1;
-    uint32_t canId = (isStartFrame
-        ? bafangCan_getWriteStartFrameId(*canLockedForCmd->attr)
-        : bafangCan_getWriteFrameId(frameIdx, (remaining == dlc)));
+    bool isStartFrame = (bWriteBuffer.sentBytes == 0);
+    bool isEndFrame = (remaining == dlc);
+    uint32_t canId = 
+        (isStartFrame ? bafangCan_getWriteStartFrameId(*canLockedForCmd->attr) :
+        (isEndFrame   ? bafangCan_getWriteEndFrameId(frameIdx) :
+        bafangCan_getWriteFrameId(frameIdx)));
     uint8_t *bOffset = bWriteBuffer.data + bWriteBuffer.sentBytes;
+    const char *frmType = (isStartFrame ? "Start" : (isEndFrame ? "End" : "Frame"));
 
     // debug
     char data[dlc*3 + 10];
     for (int i=0; i<dlc; i++) {
         sprintf(data+3*i, "%02X ", bOffset[i]);
     }
-    debug("Payload #%d, Frame idx=%d%s, canId=0x%X, tot/sent/rem/dlc %d/%d/%d/%d, sending now: %s",
-        payloadCnt, (isStartFrame ? -1 : frameIdx), (isStartFrame ? "(N/A)" : ""), 
+    debug("Sending Mf%s Payload #%d, Frame idx=%d%s, canId=%08lX, tot/sent/rem/dlc %d/%d/%d/%d, sending now: %s",
+        frmType, payloadCnt, (isStartFrame ? -1 : frameIdx), (isStartFrame ? "(N/A)" : ""), 
         canId, bWriteBuffer.totBytes, bWriteBuffer.sentBytes, remaining, dlc, data);
     // end debug
     
-    canSendMsg(canId, dlc, bOffset);
-
+    if(!canSendMsg(canId, dlc, bOffset)) {
+        return false;
+    }
     bWriteBuffer.sentBytes += dlc;
     bWriteBuffer.sentFrames++;
-
-    return false;
+    return true;
 }
 
 void buildCanMsg(
@@ -492,7 +503,7 @@ void errorUnlock(const char* format, ...) {
 
 void canUnlock() {
     canLockedRead = false;
-    readRequestSent = false;
+    readInitSent = false;
     writeRequestSent = false;
     canLockedWrite = false;
     canLockedForCmd = nullptr;

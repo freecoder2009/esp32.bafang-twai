@@ -65,11 +65,19 @@ uint32_t bafangCan_getWriteStartFrameId(const CanAttr &canAttr) {
         canAttr.subCmd
     );
 }
-uint32_t bafangCan_getWriteFrameId(int frameIdx, bool isLast) {
+uint32_t bafangCan_getWriteFrameId(int frameIdx) {
     return bafangCanId(
         CAN_DEV_BESST,
         CAN_DEV_DRIVE_UNIT,
-        (isLast ? CAN_OP_MULTIFRAME_END : CAN_OP_MULTIFRAME),
+        CAN_OP_MULTIFRAME,
+        0, frameIdx
+    );
+}
+uint32_t bafangCan_getWriteEndFrameId(int frameIdx) {
+    return bafangCanId(
+        CAN_DEV_BESST,
+        CAN_DEV_DRIVE_UNIT,
+        CAN_OP_MULTIFRAME_END,
         0, frameIdx
     );
 }
