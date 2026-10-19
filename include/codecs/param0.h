@@ -54,7 +54,7 @@ struct Param0 : CanAttr {
             offset = i-30;
             data[i] = doc["data"]["unknown"][offset].as<uint8_t>();
         }
-        data[63] = 0;//checksum(data, 63);
+        data[63] = checksum(data, 63);
     }
 
     private:

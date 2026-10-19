@@ -29,7 +29,6 @@ unsigned long canLockedAt = 0;
 CanReadBuffer bReadBuffer{};
 CanWriteBuffer bWriteBuffer{};
 CanMessage bMessage{};
-unsigned long delayFrmWriteTimer = 0;
 
 JsonDocument doc;
 
@@ -64,13 +63,13 @@ void loop() {
     }
     if(canLockedWrite
         && requireWriteInit()
-        && canRcvWriteAckOrDoDelay()
+        && canReceiveAck()
         && isCompleteWriteOrCanWriteMf()
     ) {
         canUnlock();
     }
     if(canLockedForTooLong()) {
-        errorUnlock("Timeout while locked; aborting, unlocking.");
+        errorUnlock("Timeout, unlocking.");
     }
 }
 
@@ -180,7 +179,6 @@ void prepareBuffer() {
     }
     if(canLockedWrite) {
         loadWriteBuffer();
-        delayFrmWriteTimer = 0;
     }
 }
 
@@ -393,32 +391,33 @@ bool requireWriteInit() {
     return true;
 }
 
-bool canRcvWriteAckOrDoDelay() {
+bool canReceiveAck() {
     if(!canLockedWrite) {
         return false;
     }
-    if(canReceiveMsg()) {
-        debugBMessage("Received CAN message", &bMessage);
-        if(bMessageIsAckErrWarn()) {
-            errorUnlock("Received CAN Err/Warn ack; aborting, unlocking.");
-            return false;
-        }
-    }
-    return isDelayPassed();
-}
-
-bool bMessageIsAckErrWarn() {
-    return (bMessage.op == CAN_OP_ERROR_ACK
-        || bMessage.op == CAN_OP_MULTIFRAME_WARNING);
-}
-
-bool isDelayPassed() {
-    if(millis() - delayFrmWriteTimer < DELAY_FRAME_WRITE_MS) {
+    if(!canReceiveMsg()) {
         return false;
     }
-    bool allow = (delayFrmWriteTimer > 0);
-    delayFrmWriteTimer = millis();
-    return allow;
+    debugBMessage("Received CAN message", &bMessage);
+    if(isAckErrWarn()) {
+        errorUnlock("Error/Warning ack, unlocking.");
+        return false;
+    }
+    if(!isAckOk()) {
+        return false;
+    }
+    return true;
+}
+
+bool isAckOk() {
+    return (bMessage.op == CAN_OP_NORMAL_ACK
+        && bMessage.cmd == canLockedForCmd->attr->cmd
+        && bMessage.subCmd == canLockedForCmd->attr->subCmd);
+}
+
+bool isAckErrWarn() {
+    return (bMessage.op == CAN_OP_ERROR_ACK
+        || bMessage.op == CAN_OP_MULTIFRAME_WARNING);
 }
 
 bool isCompleteWriteOrCanWriteMf() {
@@ -441,7 +440,6 @@ bool isCompleteWriteOrCanWriteMf() {
         ? bafangCan_getWriteStartFrameId(*canLockedForCmd->attr)
         : bafangCan_getWriteFrameId(frameIdx, (remaining == dlc)));
 
-
     // debug
     char data[dlc*3 + 10];
     for (int i=0; i<dlc; i++) {
@@ -451,18 +449,12 @@ bool isCompleteWriteOrCanWriteMf() {
         payloadCnt, (isStartFrame ? -1 : frameIdx), (isStartFrame ? "(N/A)" : ""), 
         canId, bWriteBuffer.totBytes, bWriteBuffer.sentBytes, remaining, dlc, data);
     // end debug
-
     
     canSendMsg(canId, dlc, bWriteBuffer.data);
 
     bWriteBuffer.sentBytes += dlc;
     bWriteBuffer.sentFrames++;
 
-    // TODO
-    // return true if write is complete (all bytes have been written)
-    //    in this case all frames should have been also acknowledged already
-    // otherwise write next frame and return false
-    // in case of error do error and unlock
     return false;
 }
 

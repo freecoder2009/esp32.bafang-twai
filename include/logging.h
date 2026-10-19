@@ -80,14 +80,16 @@ void debugBMessage(const char* text, const CanMessage *bMessage) {
     if(LOG_LEVEL > LOG_DEBUG) {
       return;
     }
-    char data[bMessage->dlc*3 + 10];
-    data[0] = NULL;
+    int totBytes = bMessage->dlc;
+    int buffSize = totBytes*3 + 1;
+    char buff[buffSize];
     for (int i=0; i<bMessage->dlc; i++) {
-        sprintf(data+3*i, "%02X ", bMessage->data[i]);
+        sprintf(buff+3*i, "%02X ", bMessage->data[i]);
     }
+    buff[buffSize-1] = '\0';
     log(LOG_DEBUG, "%s: ID=%08lX SRC=%02X DST=%02X DLC=%d OP=%02X CMD=%02X SUB=%02X DATA=%s",
         text, bMessage->rwStartId, bMessage->source, bMessage->target, bMessage->dlc,
-        bMessage->op, bMessage->cmd, bMessage->subCmd, data
+        bMessage->op, bMessage->cmd, bMessage->subCmd, buff
     );
 }
 
@@ -95,14 +97,16 @@ void debugReadBuffer(const char* text, const CanCommand *canLockedForCmd, const 
     if(LOG_LEVEL > LOG_DEBUG) {
         return;
     }
-    char data[bReadBuffer->totBytes*3 + 10];
-    data[0] = NULL;
-    for (int i=0; i<bReadBuffer->totBytes; i++) {
-        sprintf(data+3*i, "%02X ", bReadBuffer->data[i]);
+    int totBytes = bReadBuffer->totBytes;
+    int buffSize = totBytes*3 + 1;
+    char buff[buffSize];
+    for (int i=0; i<totBytes; i++) {
+        sprintf(buff+3*i, "%02X ", bReadBuffer->data[i]);
     }
+    buff[buffSize-1] = '\0';
     log(LOG_DEBUG, "%s: FIELD=%s CMD=%02X SUB=%02X BYTES:%d DATA=%s",
         text, canLockedForCmd->attr->name, canLockedForCmd->attr->cmd, 
-        canLockedForCmd->attr->subCmd, bReadBuffer->totBytes, data
+        canLockedForCmd->attr->subCmd, bReadBuffer->totBytes, buff
     );
 }
 
@@ -110,12 +114,15 @@ void debugWriteBuffer(const char* text, const CanCommand *canLockedForCmd, const
     if(LOG_LEVEL > LOG_DEBUG) {
         return;
     }
-    char data[bWriteBuffer->totBytes*3 + 10];
-    for (int i=0; i<bWriteBuffer->totBytes; i++) {
-        sprintf(data+3*i, "%02X ", bWriteBuffer->data[i]);
+    int totBytes = bWriteBuffer->totBytes;
+    int buffSize = totBytes*3 + 1;
+    char buff[buffSize];
+    for (int i=0; i<totBytes; i++) {
+        sprintf(buff+3*i, "%02X ", bWriteBuffer->data[i]);
     }
+    buff[buffSize-1] = '\0';
     log(LOG_DEBUG, "%s: FIELD=%s CMD=%02X SUB=%02X BYTES:%d DATA=%s",
         text, canLockedForCmd->attr->name, canLockedForCmd->attr->cmd, 
-        canLockedForCmd->attr->subCmd, bWriteBuffer->totBytes, data
+        canLockedForCmd->attr->subCmd, bWriteBuffer->totBytes, buff
     );
 }
