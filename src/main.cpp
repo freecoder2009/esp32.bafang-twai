@@ -3,9 +3,10 @@
 #include "driver/twai.h"
 #include "prototypes.h"
 #include "types.h"
-#include "bafang.h"
-#include "codecs.h"
 #include "logging.h"
+#include "can-supported.h"
+
+using namespace BafangCan;
 
 const int LOG_LEVEL = LOG_DEBUG;
 
@@ -31,13 +32,6 @@ CanWriteBuffer bWriteBuffer{};
 CanMessage bMessage{};
 
 JsonDocument doc;
-
-const CanCommand CAN_SUPPORTED_COMMANDS[] = {
-    CAN_SOFTWARE_READ, CAN_PARAM0_READ, CAN_PARAM0_WRITE
-};
-const int CAN_SUPPORTED_COMMANDS_COUNT = 
-    sizeof(CAN_SUPPORTED_COMMANDS)
-    / sizeof(CAN_SUPPORTED_COMMANDS[0]);
 
 void setup() {
     setupSerial();
@@ -134,8 +128,8 @@ bool lockForSupportedCmd() {
     if(canLockedRead || canLockedWrite) {
         return false;
     }
-    for(int i=0 ; i<CAN_SUPPORTED_COMMANDS_COUNT ; i++) {
-        if(!canLockByCmd(&CAN_SUPPORTED_COMMANDS[i])) {
+    for(int i=0 ; i<CAN_SUPPORTED_COUNT ; i++) {
+        if(!canLockByCmd(&CAN_SUPPORTED[i])) {
             continue;
         }
         debug("Locked for request: %s.", serialBuff);
@@ -175,10 +169,13 @@ bool canLockByCmd(const CanCommand *canCmd) {
 
 void prepareBuffer() {
     if(canLockedRead) {
-        cleanReadBuffer();
+        bReadBuffer.clean();
+        debug("Read-Buffer cleaned.");
     }
     if(canLockedWrite) {
-        loadWriteBuffer();
+        bWriteBuffer.load(doc, canLockedForCmd->attr);
+        debugWriteBuffer("Write-Buffer loaded",
+            canLockedForCmd, &bWriteBuffer);
     }
 }
 
@@ -197,30 +194,6 @@ bool requireReadInit() {
     }
     readInitSent = true;
     return true;
-}
-
-void cleanReadBuffer() {
-    bReadBuffer.totBytes = -1;
-    bReadBuffer.rcvdBytes = 0;
-    for (int i=0 ; i<MAX_RESULT_BUFF_LEN ; i++) {
-        bReadBuffer.data[i] = 0;
-    }
-    for (int i=0 ; i<MAX_RESULT_FRAME_CNT ; i++) {
-        bReadBuffer.rcvdFrames[i] = false;
-    }
-}
-
-bool loadWriteBuffer() {
-    if(!canLockedWrite) {
-        error("Not locked for write.");
-        return false;
-    }
-    bWriteBuffer.sentBytes = 0;
-    bWriteBuffer.sentFrames = 0;
-    canLockedForCmd->attr->fromJson(doc, bWriteBuffer.data);
-    bWriteBuffer.totBytes = canLockedForCmd->attr->dataSize();
-    debugWriteBuffer("Loaded data to write", canLockedForCmd, &bWriteBuffer);
-    return true;   
 }
 
 bool canReceiveMsg() {
@@ -373,7 +346,7 @@ void returnBResult() {
     doc["field"] = canLockedForCmd->attr->name;
     doc["cmd"] = canLockedForCmd->attr->cmd;
     doc["subCmd"] = canLockedForCmd->attr->subCmd;
-    canLockedForCmd->attr->toJson(doc, bReadBuffer.data);
+    canLockedForCmd->attr->bytesToJson(doc, bReadBuffer.data);
     serializeJson(doc, Serial);
     Serial.println();
 }
@@ -385,8 +358,8 @@ bool requireWriteInit() {
     if(writeRequestSent) {
         return true;
     }
-    uint32_t canId = bafangCan_getWriteStartId(*canLockedForCmd->attr);
-    uint8_t byteCnt = canLockedForCmd->attr->dataSize();
+    uint32_t canId = canGetWriteStartId(canLockedForCmd->attr);
+    uint8_t byteCnt = canLockedForCmd->attr->byteCount();
     uint8_t bytes[] = { byteCnt };
     debug("Sending Write-Init message (canId=0x%X, byteCnt=%d).", canId, byteCnt);
     if(!canSendMsg(canId, 1, bytes)) {
@@ -447,9 +420,9 @@ bool canWriteNextMf() {
     bool isStartFrame = (bWriteBuffer.sentBytes == 0);
     bool isEndFrame = (remaining == dlc);
     uint32_t canId = 
-        (isStartFrame ? bafangCan_getWriteStartFrameId(*canLockedForCmd->attr) :
-        (isEndFrame   ? bafangCan_getWriteEndFrameId(frameIdx) :
-        bafangCan_getWriteFrameId(frameIdx)));
+        (isStartFrame ? canGetWriteStartFrameId(canLockedForCmd->attr) :
+        (isEndFrame   ? canGetWriteEndFrameId(frameIdx) :
+        canGetWriteFrameId(frameIdx)));
     uint8_t *bOffset = bWriteBuffer.data + bWriteBuffer.sentBytes;
     const char *frmType = (isStartFrame ? "Start" : (isEndFrame ? "End" : "Frame"));
 

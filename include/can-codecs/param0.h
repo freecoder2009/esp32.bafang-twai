@@ -1,17 +1,22 @@
 #pragma once
 
-#include "prototypes.h"
-#include "types.h"
+#include "can-codec.h"
 
-struct Param0 : CanAttr {
+struct Param0 : CanCodec {
+private:
+    Param0() : CanCodec("param0", 0x60, 0x10) {}
 
-    Param0() : CanAttr("param0", 0x60, 0x10) {}
+public:
+    static const Param0* instance() {
+        static Param0 instance;
+        return &instance;
+    }
 
-    int dataSize() const override {
+    int byteCount() const override {
         return 64;
     }
 
-    void toJson(JsonDocument &doc, uint8_t data[]) const override {
+    void bytesToJson(JsonDocument &doc, const uint8_t data[]) const override {
         int offset;
         doc["data"]["speedLim"] = data[0];
         for (int i = 0; i < 9; i++) {
@@ -34,7 +39,7 @@ struct Param0 : CanAttr {
         doc["data"]["checksum"] = data[63];
     }
 
-    void fromJson(JsonDocument &doc, uint8_t data[]) const override {
+    void jsonToBytes(const JsonDocument &doc, uint8_t data[]) const override {
         int offset;
         data[0] = doc["data"]["speedLim"].as<uint8_t>();
         for (int i = 0; i < 9; i++) {
@@ -65,22 +70,4 @@ struct Param0 : CanAttr {
         }
         return sum & 0xFF;
     }
-};
-
-const Param0 CAN_PARAM0;
-
-const CanCommand CAN_PARAM0_READ  {
-    .attr      = &CAN_PARAM0,
-    .action    = "read",
-    .op        = CAN_OP_READ,
-    .canId = bafangCan_getReadId(CAN_PARAM0),
-    .ackId     = bafangCan_getReadAckId(CAN_PARAM0)
-};
-
-const CanCommand CAN_PARAM0_WRITE {
-    .attr      = &CAN_PARAM0,
-    .action    = "write",
-    .op        = CAN_OP_WRITE,
-    .canId = bafangCan_getWriteStartId(CAN_PARAM0),
-    .ackId     = bafangCan_getWriteAckId(CAN_PARAM0)
 };

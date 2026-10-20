@@ -2,29 +2,11 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
-#include "prototypes.h"
+#include "can-codec.h"
+#include "can-command.h"
 
 const int MAX_RESULT_BUFF_LEN = 128;
 const int MAX_RESULT_FRAME_CNT = MAX_RESULT_BUFF_LEN/8 + 1;
-
-struct CanAttr {
-  const char* name;
-  uint8_t cmd;
-  uint8_t subCmd;
-  CanAttr(const char* n, uint8_t c, uint8_t s) : name(n), cmd(c), subCmd(s) {}
-  virtual void toJson(JsonDocument &doc, uint8_t data[]) const = 0;
-  virtual void fromJson(JsonDocument &doc, uint8_t data[]) const = 0;
-  virtual int dataSize() const = 0;
-  virtual ~CanAttr() = default;
-};
-
-struct CanCommand {
-  const CanAttr* attr;
-  const char* action;
-  const int op;
-  uint32_t canId;
-  uint32_t ackId;
-};
 
 struct CanMessage {
     uint32_t canId;
@@ -41,7 +23,18 @@ struct CanReadBuffer {
     int totBytes;
     int rcvdBytes;
     bool rcvdFrames[MAX_RESULT_FRAME_CNT];
-    uint8_t data[MAX_RESULT_BUFF_LEN]; 
+    uint8_t data[MAX_RESULT_BUFF_LEN];
+
+    void clean() {
+        totBytes = -1;
+        rcvdBytes = 0;
+        for (int i=0 ; i<MAX_RESULT_BUFF_LEN ; i++) {
+            data[i] = 0;
+        }
+        for (int i=0 ; i<MAX_RESULT_FRAME_CNT ; i++) {
+            rcvdFrames[i] = false;
+        }
+    }
 };
 
 struct CanWriteBuffer {
@@ -49,4 +42,11 @@ struct CanWriteBuffer {
     int sentBytes;
     int sentFrames;
     uint8_t data[MAX_RESULT_BUFF_LEN];
+
+    void load(const JsonDocument &doc, const CanCodec *codec) {
+        sentBytes = 0;
+        sentFrames = 0;
+        totBytes = codec->byteCount();
+        codec->jsonToBytes(doc, data);
+    }
 };

@@ -5,12 +5,10 @@
 #include "driver/twai.h"
 
 struct CanCommand;
-struct CanAttr;
+struct CanCodec;
 struct CanMessage;
 struct CanReadBuffer;
 struct CanWriteBuffer;
-
-struct Param0;
 
 void setupSerial();
 void setupTwai();
@@ -31,8 +29,6 @@ void buildCanMsg(
     uint8_t dlc=0,
     uint8_t data[]=nullptr
 );
-void cleanReadBuffer();
-bool loadWriteBuffer();
 void prepareBuffer();
 bool canReceiveMsg();
 void decodeToBMessage(const twai_message_t &msg);
@@ -54,12 +50,3 @@ bool canWriteNextMf();
 bool canLockedForTooLong();
 void canUnlock();
 void errorUnlock(const char* format, ...);
-
-uint32_t bafangCan_getReadId(const CanAttr &canAttr);
-uint32_t bafangCan_getReadAckId(const CanAttr &canAttr);
-uint32_t bafangCan_getWriteStartId(const CanAttr &canAttr);
-uint32_t bafangCan_getWriteAckId(const CanAttr &canAttr);
-uint32_t bafangCan_getWriteStartFrameId(const CanAttr &canAttr);
-uint32_t bafangCan_getWriteFrameId(int frameIdx);
-uint32_t bafangCan_getWriteEndFrameId(int frameIdx);
-uint32_t bafangCanId(const int source, const int target, const int op, int cmd, int subCmd);
