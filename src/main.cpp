@@ -187,7 +187,7 @@ bool requireReadInit() {
     if(readInitSent) {
         return true;
     }
-    uint32_t canId = canLockedForCmd->canId;
+    uint32_t canId = canGetReadId(canLockedForCmd->attr);
     debug("Sending Read-Init message (canId=0x%X).", canId);
     if(!canSendMsg(canId)) {
         return false;
@@ -307,7 +307,7 @@ bool sendReadAck() {
     if(!canLockedRead) {
         return false;
     }
-    uint32_t canId = canLockedForCmd->ackId;
+    uint32_t canId = canGetReadAckId(canLockedForCmd->attr);
     trace("Sending Read-Ack message (canId=0x%X).", canId);
     if(!canSendMsg(canId)) {
         return false;

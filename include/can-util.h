@@ -5,7 +5,15 @@
 #include "can-codec.h"
 
 namespace BafangCan {
-    uint32_t canGetCanId(const int source, const int target, const int op, int cmd, int subCmd);
+
+    uint32_t canGetCanId(const int source, const int target, const int op, int cmd, int subCmd) {
+        uint8_t b0 = 0x80 | (source & 0x0F);
+        uint8_t b1 = ((target & 0x1F) << 3) | (op & 0x07);
+        return ((uint32_t)b0 << 24) |
+            ((uint32_t)b1 << 16) |
+            ((uint32_t)cmd << 8) |
+            subCmd;
+    }
 
     uint32_t canGetReadId(const CanCodec *canAttr) {
         return canGetCanId(
@@ -61,14 +69,5 @@ namespace BafangCan {
             CAN_OP_MULTIFRAME_END,
             0, frameIdx
         );
-    }
-
-    uint32_t canGetCanId(const int source, const int target, const int op, int cmd, int subCmd) {
-        uint8_t b0 = 0x80 | (source & 0x0F);
-        uint8_t b1 = ((target & 0x1F) << 3) | (op & 0x07);
-        return ((uint32_t)b0 << 24) |
-            ((uint32_t)b1 << 16) |
-            ((uint32_t)cmd << 8) |
-            subCmd;
     }
 }
