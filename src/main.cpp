@@ -146,7 +146,7 @@ bool canLockByCmd(const CanCommand *canCmd) {
     if(!doc["type"] || strcmp("req", doc["type"]) != 0) {
         return false;
     }
-    if(!doc["field"] || strcmp(canCmd->attr->name, doc["field"]) != 0) {
+    if(!doc["field"] || strcmp(canCmd->codec->name, doc["field"]) != 0) {
         return false;
     }
     if(!doc["action"] || strcmp(canCmd->action, doc["action"]) != 0) {
@@ -173,7 +173,7 @@ void prepareBuffer() {
         debug("Read-Buffer cleaned.");
     }
     if(canLockedWrite) {
-        bWriteBuffer.load(doc, canLockedForCmd->attr);
+        bWriteBuffer.load(doc, canLockedForCmd->codec);
         debugWriteBuffer("Write-Buffer loaded",
             canLockedForCmd, &bWriteBuffer);
     }
@@ -187,7 +187,7 @@ bool requireReadInit() {
     if(readInitSent) {
         return true;
     }
-    uint32_t canId = canGetReadId(canLockedForCmd->attr);
+    uint32_t canId = canGetReadId(canLockedForCmd->codec);
     debug("Sending Read-Init message (canId=0x%X).", canId);
     if(!canSendMsg(canId)) {
         return false;
@@ -269,8 +269,8 @@ bool decodedMfStart() {
     }
     if(
         bMessage.op != CAN_OP_MULTIFRAME_START ||
-        bMessage.cmd != canLockedForCmd->attr->cmd ||
-        bMessage.subCmd != canLockedForCmd->attr->subCmd
+        bMessage.cmd != canLockedForCmd->codec->cmd ||
+        bMessage.subCmd != canLockedForCmd->codec->subCmd
     ) {
         return false;
     }
@@ -307,7 +307,7 @@ bool sendReadAck() {
     if(!canLockedRead) {
         return false;
     }
-    uint32_t canId = canGetReadAckId(canLockedForCmd->attr);
+    uint32_t canId = canGetReadAckId(canLockedForCmd->codec);
     trace("Sending Read-Ack message (canId=0x%X).", canId);
     if(!canSendMsg(canId)) {
         return false;
@@ -343,10 +343,10 @@ void returnBResult() {
     debugReadBuffer("Returning", canLockedForCmd, &bReadBuffer);
     doc.clear();
     doc["type"] = "result";
-    doc["field"] = canLockedForCmd->attr->name;
-    doc["cmd"] = canLockedForCmd->attr->cmd;
-    doc["subCmd"] = canLockedForCmd->attr->subCmd;
-    canLockedForCmd->attr->bytesToJson(doc, bReadBuffer.data);
+    doc["field"] = canLockedForCmd->codec->name;
+    doc["cmd"] = canLockedForCmd->codec->cmd;
+    doc["subCmd"] = canLockedForCmd->codec->subCmd;
+    canLockedForCmd->codec->bytesToJson(doc, bReadBuffer.data);
     serializeJson(doc, Serial);
     Serial.println();
 }
@@ -358,8 +358,8 @@ bool requireWriteInit() {
     if(writeRequestSent) {
         return true;
     }
-    uint32_t canId = canGetWriteStartId(canLockedForCmd->attr);
-    uint8_t byteCnt = canLockedForCmd->attr->byteCount();
+    uint32_t canId = canGetWriteStartId(canLockedForCmd->codec);
+    uint8_t byteCnt = canLockedForCmd->codec->byteCount();
     uint8_t bytes[] = { byteCnt };
     debug("Sending Write-Init message (canId=0x%X, byteCnt=%d).", canId, byteCnt);
     if(!canSendMsg(canId, 1, bytes)) {
@@ -388,8 +388,8 @@ bool canReceiveAck() {
 
 bool isAckOk() {
     return (bMessage.op == CAN_OP_NORMAL_ACK
-        && bMessage.cmd == canLockedForCmd->attr->cmd
-        && bMessage.subCmd == canLockedForCmd->attr->subCmd);
+        && bMessage.cmd == canLockedForCmd->codec->cmd
+        && bMessage.subCmd == canLockedForCmd->codec->subCmd);
 }
 
 bool isAckErrWarn() {
@@ -403,7 +403,7 @@ bool isCompleteWriteOrCanWriteMf() {
     }
     if(bWriteBuffer.sentBytes == bWriteBuffer.totBytes) {
         debug("Write complete for %s; bytes tot/sent %d/%d.", 
-            canLockedForCmd->attr->name, bWriteBuffer.totBytes, bWriteBuffer.sentBytes);
+            canLockedForCmd->codec->name, bWriteBuffer.totBytes, bWriteBuffer.sentBytes);
         return true;
     }
     canWriteNextMf();
@@ -420,7 +420,7 @@ bool canWriteNextMf() {
     bool isStartFrame = (bWriteBuffer.sentBytes == 0);
     bool isEndFrame = (remaining == dlc);
     uint32_t canId = 
-        (isStartFrame ? canGetWriteStartFrameId(canLockedForCmd->attr) :
+        (isStartFrame ? canGetWriteStartFrameId(canLockedForCmd->codec) :
         (isEndFrame   ? canGetWriteEndFrameId(frameIdx) :
         canGetWriteFrameId(frameIdx)));
     uint8_t *bOffset = bWriteBuffer.data + bWriteBuffer.sentBytes;

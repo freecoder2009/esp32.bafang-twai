@@ -4,5 +4,5 @@
 
 struct CanCommand {
     const char* action;
-    const CanCodec* attr;
+    const CanCodec* codec;
 };

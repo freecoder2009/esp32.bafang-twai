@@ -132,8 +132,8 @@ void debugReadBuffer(const char* text, const CanCommand *canLockedForCmd, const 
     }
     buff[buffSize-1] = '\0';
     log(LOG_DEBUG, "%s: FIELD=%s CMD=%02X SUB=%02X BYTES:%d DATA=%s",
-        text, canLockedForCmd->attr->name, canLockedForCmd->attr->cmd, 
-        canLockedForCmd->attr->subCmd, bReadBuffer->totBytes, buff
+        text, canLockedForCmd->codec->name, canLockedForCmd->codec->cmd, 
+        canLockedForCmd->codec->subCmd, bReadBuffer->totBytes, buff
     );
 }
 
@@ -149,7 +149,7 @@ void debugWriteBuffer(const char* text, const CanCommand *canLockedForCmd, const
     }
     buff[buffSize-1] = '\0';
     log(LOG_DEBUG, "%s: FIELD=%s CMD=%02X SUB=%02X BYTES:%d DATA=%s",
-        text, canLockedForCmd->attr->name, canLockedForCmd->attr->cmd, 
-        canLockedForCmd->attr->subCmd, bWriteBuffer->totBytes, buff
+        text, canLockedForCmd->codec->name, canLockedForCmd->codec->cmd, 
+        canLockedForCmd->codec->subCmd, bWriteBuffer->totBytes, buff
     );
 }

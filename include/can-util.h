@@ -15,43 +15,43 @@ namespace BafangCan {
             subCmd;
     }
 
-    uint32_t canGetReadId(const CanCodec *canAttr) {
+    uint32_t canGetReadId(const CanCodec *codec) {
         return canGetCanId(
             CAN_DEV_BESST, CAN_DEV_DRIVE_UNIT, 
             CAN_OP_READ,
-            canAttr->cmd, canAttr->subCmd
+            codec->cmd, codec->subCmd
         );
     }
 
-    uint32_t canGetReadAckId(const CanCodec *canAttr) {
+    uint32_t canGetReadAckId(const CanCodec *codec) {
         return canGetCanId(
             CAN_DEV_BESST, CAN_DEV_DRIVE_UNIT, 
             CAN_OP_NORMAL_ACK,
-            canAttr->cmd, canAttr->subCmd
+            codec->cmd, codec->subCmd
         );
     }
 
-    uint32_t canGetWriteStartId(const CanCodec *canAttr) {
+    uint32_t canGetWriteStartId(const CanCodec *codec) {
         return canGetCanId(
             CAN_DEV_BESST, CAN_DEV_DRIVE_UNIT,
             CAN_OP_WRITE,
-            canAttr->cmd, canAttr->subCmd
+            codec->cmd, codec->subCmd
         );
     }
 
-    uint32_t canGetWriteAckId(const CanCodec *canAttr) {
+    uint32_t canGetWriteAckId(const CanCodec *codec) {
         return canGetCanId(
             CAN_DEV_DRIVE_UNIT, CAN_DEV_BESST,
             CAN_OP_NORMAL_ACK,
-            canAttr->cmd, canAttr->subCmd
+            codec->cmd, codec->subCmd
         );
     }
 
-    uint32_t canGetWriteStartFrameId(const CanCodec *canAttr) {
+    uint32_t canGetWriteStartFrameId(const CanCodec *codec) {
         return canGetCanId(
             CAN_DEV_BESST, CAN_DEV_DRIVE_UNIT,
             CAN_OP_MULTIFRAME_START,
-            canAttr->cmd, canAttr->subCmd
+            codec->cmd, codec->subCmd
         );
     }
 
