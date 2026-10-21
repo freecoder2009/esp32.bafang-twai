@@ -22,7 +22,7 @@ public:
         char buff[BYTE_COUNT + 1];
         memcpy(buff, data, BYTE_COUNT);
         buff[BYTE_COUNT] = '\0';
-        doc["data"]["firmware"] = buff;
+        doc["data"]["sversion"] = buff;
     }
 
     void jsonToBytes(const JsonDocument &doc, uint8_t data[]) const override {}
