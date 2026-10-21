@@ -7,13 +7,15 @@ private:
     Param0() : CanCodec("param0", 0x60, 0x10) {}
 
 public:
+    static const int BYTE_COUNT = 64;
+
     static const Param0* instance() {
         static Param0 instance;
         return &instance;
     }
 
     int byteCount() const override {
-        return 64;
+        return BYTE_COUNT;
     }
 
     void bytesToJson(JsonDocument &doc, const uint8_t data[]) const override {
