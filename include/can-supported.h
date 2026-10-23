@@ -7,12 +7,15 @@
 #include "can-codecs/hardware.h"
 #include "can-codecs/software.h"
 #include "can-codecs/param0.h"
+#include "can-codecs/param1.h"
 
 const CanCommand CAN_SUPPORTED[] = {
     { .action = "read",  .codec = Hardware::instance() },
     { .action = "read",  .codec = Software::instance() },
     { .action = "read",  .codec = Param0::instance()   },
-    { .action = "write", .codec = Param0::instance()   }
+    { .action = "write", .codec = Param0::instance()   },
+    { .action = "read",  .codec = Param1::instance()   },
+    { .action = "write", .codec = Param1::instance()   }
 };
 
 const int CAN_SUPPORTED_COUNT = sizeof(CAN_SUPPORTED)

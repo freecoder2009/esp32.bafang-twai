@@ -63,13 +63,4 @@ public:
         }
         data[63] = checksum(data, 63);
     }
-
-    private:
-    uint8_t checksum(uint8_t data[], int byteCnt) const {
-        uint16_t sum = 0;
-        for (int i=0; i<byteCnt; i++) {
-            sum += data[i];
-        }
-        return sum & 0xFF;
-    }
 };

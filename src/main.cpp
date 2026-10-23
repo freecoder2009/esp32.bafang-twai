@@ -14,11 +14,10 @@ const int LOG_LEVEL = LOG_DEBUG;
 #define RX_PIN GPIO_NUM_4
 
 const unsigned long SERIAL_BAUD = 1000000;
+const unsigned long MAX_CAN_LOCK_MILLIS = 2000;
 
 const unsigned int MAX_SERIAL_BUFF_LEN = 512;
-const unsigned long MAX_CAN_LOCK_MILLIS = 2000;
 const int MAX_BYTES_PER_FRAME = 8;
-const int DELAY_FRAME_WRITE_MS = 50;
 
 char serialBuff[MAX_SERIAL_BUFF_LEN];
 bool canLockedRead = false;
