@@ -42,4 +42,14 @@
 -write request:
     {"type":"req","field":"param1","action":"write","data":{"unknown1":[48,24,60,40,160,176,179,152,58,5,25,5,0,4,0,48,2,0,1,8,1,0,142,8,40,10,125,0,152,0,107,0,10,0,12,36,1,0,0,0],"pasCurrentLim":[36,39,48,55,63,69,77,88,100],"pasSpeedLim":[32,37,43,50,57,64,73,85,100],"unknown2":[0,0,0,0,0]}}
 
-
+#param2
+-read
+    -request:
+        {"type":"req","field":"param2","action":"read"}
+    -result
+        -bytes (hex, 64):
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 10 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 05 96 B4 64 6E 05 00 00 00 36
+        -json (dec):
+            {"type":"result","field":"param2","cmd":96,"subCmd":18,"data":{"startTorque":[0,0,0,0,0,0],"fullLoadTorque":[0,0,0,0,0,0],"returnTorque":[0,0,0,0,0,0],"maxCurrent":[0,0,0,0,0,0],"minCurrent":[0,0,0,0,0,0],"torqueAttenuation":[0,0,0,0,0,0],"startPulse":[16,0,0,0,0,0],"currentDecayTime":[0,0,0,0,0,0],"unknown":[0,0,0,0,0,0,5,150,180,100,110,5,0,0,0],"checksum":54}}
+-write request:
+    {"type":"req","field":"param2","action":"write","data":{"startTorque":[0,0,0,0,0,0],"fullLoadTorque":[0,0,0,0,0,0],"returnTorque":[0,0,0,0,0,0],"maxCurrent":[0,0,0,0,0,0],"minCurrent":[0,0,0,0,0,0],"torqueAttenuation":[0,0,0,0,0,0],"startPulse":[16,0,0,0,0,0],"currentDecayTime":[0,0,0,0,0,0],"unknown":[0,0,0,0,0,0,5,150,180,100,110,5,0,0,0]}}
