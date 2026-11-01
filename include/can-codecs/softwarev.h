@@ -2,15 +2,15 @@
 
 #include "can-codec.h"
 
-struct Hardware : CanCodec {
+struct SoftwareV : CanCodec {
 private:
-    Hardware() : CanCodec("hardware", 0x60, 0x00) {}
+    SoftwareV() : CanCodec("softwarev", 0x60, 0x01) {}
 
 public:
-    static const int BYTE_COUNT = 13;
+    static const int BYTE_COUNT = 20;
 
-    static const Hardware* instance() {
-        static Hardware instance;
+    static const SoftwareV* instance() {
+        static SoftwareV instance;
         return &instance;
     }
 
@@ -22,7 +22,7 @@ public:
         char buff[BYTE_COUNT + 1];
         memcpy(buff, data, BYTE_COUNT);
         buff[BYTE_COUNT] = '\0';
-        doc["data"]["hardwarev"] = buff;
+        doc["data"]["softwarev"] = buff;
     }
 
     void jsonToBytes(const JsonDocument &doc, uint8_t data[]) const override {}

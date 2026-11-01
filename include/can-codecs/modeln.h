@@ -2,15 +2,15 @@
 
 #include "can-codec.h"
 
-struct Model : CanCodec {
+struct ModelN : CanCodec {
 private:
-    Model() : CanCodec("model", 0x60, 0x02) {}
+    ModelN() : CanCodec("modeln", 0x60, 0x02) {}
 
 public:
     static const int BYTE_COUNT = 9;
 
-    static const Model* instance() {
-        static Model instance;
+    static const ModelN* instance() {
+        static ModelN instance;
         return &instance;
     }
 
