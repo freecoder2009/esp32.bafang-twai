@@ -1,4 +1,4 @@
-#software
+#software version
 -read
     -request:
         {"type":"req","field":"software","action":"read"}
@@ -8,7 +8,7 @@
         -json (ascii):
             {"type":"result","field":"software","cmd":96,"subCmd":1,"data":{"softwarev":"CRR309C4824F807008.5"}}
 
-#hardware
+#hardware version
 -read
     -request:
         {"type":"req","field":"hardware","action":"read"}
@@ -18,7 +18,7 @@
         -json (ascii):
             {"type":"result","field":"hardware","cmd":96,"subCmd":0,"data":{"hardwarev":"CR R309.C 7.1"}}
 
-#model
+#model number
 -read
     -request:
         {"type":"req","field":"model","action":"read"}
@@ -27,6 +27,16 @@
             43 52 20 52 33 30 39 2E 43
         -json (ascii):
             {"type":"result","field":"model","cmd":96,"subCmd":2,"data":{"modeln":"CR R309.C"}}
+
+#serial number
+-read
+    -request:
+        {"type":"req","field":"serialn","action":"read"}
+    -result:
+        -bytes (hex, 22 bytes):
+            
+        -json (ascii):
+            
 
 #param0
 -read
