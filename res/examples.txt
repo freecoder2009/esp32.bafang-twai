@@ -6,7 +6,7 @@
         -bytes (hex, 20 bytes):
             43 52 52 33 30 39 43 34 38 32 34 46 38 30 37 30 30 38 2E 35
         -json (ascii):
-            {"type":"result","field":"software","cmd":96,"subCmd":1,"data":{"sversion":"CRR309C4824F807008.5"}}
+            {"type":"result","field":"software","cmd":96,"subCmd":1,"data":{"softwarev":"CRR309C4824F807008.5"}}
 
 #hardware
 -read
@@ -16,7 +16,7 @@
         -bytes (hex, 13 bytes):
             43 52 20 52 33 30 39 2E 43 20 37 2E 31
         -json (ascii):
-            {"type":"result","field":"hardware","cmd":96,"subCmd":0,"data":{"hversion":"CR R309.C 7.1"}}
+            {"type":"result","field":"hardware","cmd":96,"subCmd":0,"data":{"hardwarev":"CR R309.C 7.1"}}
 
 #model
 -read
@@ -26,7 +26,7 @@
         -bytes (hex, 9 bytes):
             43 52 20 52 33 30 39 2E 43
         -json (ascii):
-            {"type":"result","field":"model","cmd":96,"subCmd":2,"data":{"modelv":"CR R309.C"}}
+            {"type":"result","field":"model","cmd":96,"subCmd":2,"data":{"modeln":"CR R309.C"}}
 
 #param0
 -read
